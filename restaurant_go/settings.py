@@ -29,6 +29,8 @@ SECRET_KEY = "django-insecure-ydal4wy$2pq6@r$x=gdgo%b!i7bh1l5ag$^uh2hbcipwxk4(n4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+dev: str | None = os.getenv("dev")
+
 ALLOWED_HOSTS = ["*"]
 
 
@@ -97,10 +99,14 @@ db_dict: Dict = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": (
+        db_dict.get(dev)
+        if db_dict.get(dev)
+        else {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    )
 }
 
 
