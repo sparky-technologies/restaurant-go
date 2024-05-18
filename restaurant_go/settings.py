@@ -16,6 +16,7 @@ import logging.config
 from typing import Dict
 from django.utils.log import DEFAULT_LOGGING
 import os
+from typing import Union
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,7 +30,7 @@ SECRET_KEY = "django-insecure-ydal4wy$2pq6@r$x=gdgo%b!i7bh1l5ag$^uh2hbcipwxk4(n4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-dev: str | None = os.getenv("dev")
+dev: Union[str, None] = os.getenv("dev")
 
 ALLOWED_HOSTS = ["*"]
 
