@@ -78,9 +78,13 @@ WSGI_APPLICATION = "restaurant_go.wsgi.application"
 
 
 db_dict: Dict = {
-    "aref": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    "areef": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("DEV_NAME"),
+        "USER": os.getenv("DEV_USER"),
+        "PASSWORD": os.getenv("DEV_PASSWORD"),
+        "HOST": os.getenv("DEV_HOST"),
+        "PORT": os.getenv("DEV_PORT"),
     },
     "ayo": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -111,14 +115,14 @@ DATABASES = {
 }
 
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_HOST_USER = "rifbackend001@gmail.com"
-EMAIL_HOST_PASSWORD = "gtgt pbqu yljb evoz"
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = "smtp.gmail.com"
+# # EMAIL_PORT = 587
+# # EMAIL_USE_TLS = True
+# EMAIL_PORT = 465
+# EMAIL_USE_SSL = True
+# EMAIL_HOST_USER = "rifbackend001@gmail.com"
+# EMAIL_HOST_PASSWORD = "gtgt pbqu yljb evoz"
 
 
 # Password validation
