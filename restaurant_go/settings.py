@@ -13,10 +13,13 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import logging
 import logging.config
-from typing import Dict
+from typing import Dict, Union
 from django.utils.log import DEFAULT_LOGGING
 import os
-from typing import Union
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "users"
 ]
 
 MIDDLEWARE = [
