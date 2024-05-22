@@ -16,6 +16,7 @@ import logging.config
 from typing import Dict
 from django.utils.log import DEFAULT_LOGGING
 import os
+from typing import Union
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,7 +30,7 @@ SECRET_KEY = "django-insecure-ydal4wy$2pq6@r$x=gdgo%b!i7bh1l5ag$^uh2hbcipwxk4(n4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-dev: str | None = os.getenv("dev")
+dev: Union[str, None] = os.getenv("dev")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -105,6 +106,7 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [os.path.join(BASE_DIR, 'templates')],
+        "DIRS": ["templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -240,47 +242,52 @@ logger = logging.getLogger(__name__)
 
 LOG_LEVEL = "INFO"
 
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "console": {
-                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+
+try:
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "console": {
+                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                },
+                "file": {
+                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                },
+                "django.server": DEFAULT_LOGGING["formatters"]["django.server"],
             },
-            "file": {
-                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "handlers": {
+                "console": {
+                    "level": LOG_LEVEL,
+                    "class": "logging.StreamHandler",
+                    "formatter": "console",
+                },
+                "file": {
+                    "level": LOG_LEVEL,
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "formatter": "file",
+                    "filename": BASE_DIR / "logs" / "django.log",
+                    "maxBytes": 1024 * 1024 * 10,  # 5 MB
+                    "backupCount": 5,
+                },
+                "django.server": DEFAULT_LOGGING["handlers"]["django.server"],
             },
-            "django.server": DEFAULT_LOGGING["formatters"]["django.server"],
-        },
-        "handlers": {
-            "console": {
-                "level": LOG_LEVEL,
-                "class": "logging.StreamHandler",
-                "formatter": "console",
+            "loggers": {
+                "": {
+                    "level": LOG_LEVEL,
+                    "handlers": ["console", "file"],
+                    "propagate": False,
+                },
+                "apps": {
+                    "level": LOG_LEVEL,
+                    "handlers": ["console", "file"],
+                    "propagate": False,
+                },
             },
-            "file": {
-                "level": LOG_LEVEL,
-                "class": "logging.handlers.RotatingFileHandler",
-                "formatter": "file",
-                "filename": BASE_DIR / "logs" / "django.log",
-                "maxBytes": 1024 * 1024 * 10,  # 5 MB
-                "backupCount": 5,
-            },
-            "django.server": DEFAULT_LOGGING["handlers"]["django.server"],
-        },
-        "loggers": {
-            "": {
-                "level": LOG_LEVEL,
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-            "apps": {
-                "level": LOG_LEVEL,
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-        },
-        "django.server": DEFAULT_LOGGING["loggers"]["django.server"],
-    }
-)
+            "django.server": DEFAULT_LOGGING["loggers"]["django.server"],
+        }
+    )
+
+except Exception:
+    pass
