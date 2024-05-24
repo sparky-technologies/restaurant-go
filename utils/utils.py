@@ -7,7 +7,7 @@ from typing import Union
 logger = logging.getLogger(__name__)
 
 
-def send_otp(email: str, username: str) -> Union[str, None]:
+def send_otp(email: Union[str, None], username: Union[str, None]) -> Union[str, None]:
     """
     This function generates an One Time Password (OTP) and sends it to the specified email address.
 
