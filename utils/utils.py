@@ -38,6 +38,8 @@ def send_otp(email: str, username: str) -> Union[str, None]:
         )
 
         return otp
+    except ValueError:
+        raise ValueError("Email and username must be provided")
     except Exception as e:
         logger.error(f"Error sending email to {email} due to {e}")
         traceback.print_exc()

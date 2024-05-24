@@ -1,7 +1,6 @@
 import logging
 import traceback
 import uuid
-
 from django.core.mail import EmailMessage, send_mail
 from django.template import Context
 from django.template.loader import get_template, render_to_string
@@ -56,6 +55,7 @@ def sendmail(
     msg.content_subtype = "html"
 
     msg.extra_headers["Reply-To"] = "truebone002@gmail.com"
+    # msg.send()
 
     try:
         msg.send()
