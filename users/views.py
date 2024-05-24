@@ -202,6 +202,7 @@ class SocialAuth(APIView):
             }
             now: datetime = datetime.now()
             user.last_login = now
+            user.email_verified = True
             user.save()
             return service_response(
                 status="success",
