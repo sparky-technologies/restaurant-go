@@ -177,3 +177,6 @@ class UserLoginAPIView(APIView):
                 )
         except Exception:
             return handle_internal_server_exception()
+
+
+# TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
