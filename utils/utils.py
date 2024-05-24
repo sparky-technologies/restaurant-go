@@ -29,7 +29,11 @@ def send_otp(email: str, username: str) -> Union[str, None]:
         uuid_hex = uid.hex  # convert to hex value
         otp = "".join(filter(str.isdigit, uuid_hex))[:6]
 
-        message = f"Your One Time Password is {otp}"
+        message = f"""
+        Your One Time Password is {otp}
+        <br />
+        Expires in 10 minutes   
+        """
         sendmail(
             subject="Email Verification Code",
             message=message,
