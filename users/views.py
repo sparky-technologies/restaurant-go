@@ -221,3 +221,5 @@ class SocialAuth(APIView):
 
 
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
+# TODO: implement password reset endpoints
+# TODO: implement change password endpoint should required authentication
