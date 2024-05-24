@@ -8,6 +8,7 @@ from .serializers import UserSerializer
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
+from drf_yasg.utils import swagger_auto_schema
 
 
 class CreateUserAPIView(APIView):
@@ -17,6 +18,15 @@ class CreateUserAPIView(APIView):
 
     serializer_class = UserSerializer
 
+    @swagger_auto_schema(
+        request_body=UserSerializer,
+        operation_description="Create a new user",
+        responses={
+            201: "Registration successful, An OTP has been sent to your email",
+            400: "Bad request",
+            500: "Internal server error",
+        },
+    )
     def post(self, request):
         """Post handler to create a new user"""
         try:
@@ -40,11 +50,11 @@ class CreateUserAPIView(APIView):
                     message=_(
                         f"Registration Successful, An OTP has been sent to your email {email}"
                     ),
-                    status_code=200,
+                    status_code=201,
                 )
             else:
                 return service_response(
-                    status="error", message=serializer.errors, status_code=404
+                    status="error", message=serializer.errors, status_code=400
                 )
 
         except Exception:
