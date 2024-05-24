@@ -28,9 +28,14 @@ def test_send_otp_valid_input(email, username):
 
         assert otp is not None
         assert len(otp) == 6
+        message = f"""
+        Your One Time Password is {otp}
+        <br />
+        Expires in 10 minutes   
+        """
         mocked_sendmail.assert_called_once_with(
             subject="Email Verification Code",
-            message=f"Your One Time Password is {otp}",
+            message=message,
             user_email=email,
             username=username,
         )
