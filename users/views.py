@@ -66,3 +66,36 @@ class RootPage(APIView):
         return service_response(
             status="success", message="Great, Welcome all good!", status_code=200
         )
+
+
+class VerifyOTP(APIView):
+    """
+    Verify the otp sent to the user email address
+    """
+
+    def post(self, request, *args, **kwargs):
+        """Post handler to verify the otp sent to the user"""
+        try:
+            email = request.data.get("email")
+            otp = request.data.get("otp")
+            # retrieve otp from cache with the email
+            cache_otp = cache.get(email)
+            print(cache_otp)
+            if otp is None:
+                return service_response(
+                    status="error", message=_("Invalid OTP"), status_code=400
+                )
+            # check if the otp sent by the user matches the otp in the cache
+            if str(otp) == str(cache_otp):
+                # delete the otp from the cache if correct
+                cache.delete(email)
+                return service_response(
+                    status="success", message=_("OTP verified"), status_code=200
+                )
+            else:
+                return service_response(
+                    status="error", message=_("Invalid OTP"), status_code=400
+                )
+
+        except Exception:
+            return handle_internal_server_exception()
