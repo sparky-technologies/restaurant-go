@@ -267,7 +267,7 @@ except Exception:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "rediss://red-cp83t0ol6cac73bt0pdg:E5urhmwA6rS9EZral8tj28afEvag3G61@oregon-redis.render.com:6379",
+        "LOCATION": "redis://:G2d5EtNm06LwWJXu97Tn143BcYAQ8kjg@fra1.clusters.zeabur.com:31017",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

@@ -2,13 +2,15 @@ from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
 from utils.utils import send_otp
 from .serializers import UserSerializer
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class CreateUserAPIView(APIView):
@@ -87,6 +89,9 @@ class VerifyOTP(APIView):
                 )
             # check if the otp sent by the user matches the otp in the cache
             if str(otp) == str(cache_otp):
+                user = User.objects.get(email=email)
+                user.email_verified = True
+                user.save()
                 # delete the otp from the cache if correct
                 cache.delete(email)
                 return service_response(
