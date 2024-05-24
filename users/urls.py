@@ -10,4 +10,5 @@ urlpatterns = [
     path("otp/resend", ResendOTP.as_view(), name="resend-otp"),
     path("login", UserLoginAPIView.as_view(), name="login"),
     path("token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
+    path("social_auth", SocialAuth.as_view(), name="social_auth"),
 ]

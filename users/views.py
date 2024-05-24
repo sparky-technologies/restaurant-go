@@ -1,4 +1,5 @@
 from typing import Union
+from django.db import IntegrityError
 from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
@@ -175,6 +176,45 @@ class UserLoginAPIView(APIView):
                 return service_response(
                     status="error", message=serializer.errors, status_code=400
                 )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class SocialAuth(APIView):
+    """Create user with just email and username from social auth response and login"""
+
+    def post(self, request, *args, **kwargs) -> Response:
+        """Post handler to create user with username and email"""
+        try:
+            data = request.data
+            # get or create user from db
+            user, created = User.objects.get_or_create(**data)
+            print(created)
+            # get the tokens
+            tokens = RefreshToken.for_user(user)
+            access_token = str(tokens.access_token)
+            refresh_token = str(tokens)
+            # Construct token data response
+            token_data = {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "expires_in": tokens.access_token.lifetime.total_seconds(),
+            }
+            now: datetime = datetime.now()
+            user.last_login = now
+            user.save()
+            return service_response(
+                status="success",
+                message="Login Successful",
+                data=token_data,
+                status_code=200,
+            )
+        except IntegrityError:
+            return service_response(
+                status="error",
+                message="User with the email or username already exist",
+                status_code=400,
+            )
         except Exception:
             return handle_internal_server_exception()
 
