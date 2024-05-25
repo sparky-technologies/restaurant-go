@@ -1,18 +1,22 @@
+from datetime import datetime
 from typing import Union
-from django.db import IntegrityError
-from django.shortcuts import render
-from django.utils.translation import gettext_lazy as _
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from utils.utils import send_otp
-from .serializers import LoginSerializer, UserSerializer
+
 from django.core.cache import cache
+from django.db import IntegrityError
+from django.utils.translation import gettext_lazy as _
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
-from drf_yasg.utils import swagger_auto_schema
+from utils.utils import send_otp
 from .models import User
-from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import datetime
+from .serializers import LoginSerializer, UserSerializer
+from .swagger_serializer import ResponseSerializer
 
 
 class CreateUserAPIView(APIView):
@@ -26,9 +30,50 @@ class CreateUserAPIView(APIView):
         request_body=UserSerializer,
         operation_description="Create a new user",
         responses={
-            201: "Registration successful, An OTP has been sent to your email",
-            400: "Bad request",
-            500: "Internal server error",
+            status.HTTP_201_CREATED: openapi.Response(
+                schema=ResponseSerializer(),
+                description="User created successfully",
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "Registration Successful, An OTP has been sent to your email",
+                        "data":{}
+                    }
+                }
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                schema=ResponseSerializer(),
+                description="Bad request",
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "User with username|email already exists.",
+                        "data":{}
+                    }
+                }
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                schema=ResponseSerializer(),
+                description="Unable to send OTP",
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Unable to send OTP",
+                        "data":{}
+                    }
+                }
+            )
+            ,
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                schema=ResponseSerializer(),
+                description="Internal server error",
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data":{}
+                    }}
+            ),
         },
     )
     def post(self, request) -> Response:
@@ -66,6 +111,24 @@ class CreateUserAPIView(APIView):
 
 
 class RootPage(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Root page",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Root page api response",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "Great, Welcome all good!",
+                        "data":{}
+                    }
+
+                }
+            )
+        }
+    )
     def get(self, request, format=None):
         return service_response(
             status="success", message="Great, Welcome all good!", status_code=200
@@ -113,6 +176,62 @@ class ResendOTP(APIView):
     Resend the otp to the user email address
     """
 
+    @swagger_auto_schema(
+        operation_description="Resend the otp",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "email": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="The email address",
+                    example="example@mail.com",
+                )
+            },
+            required=['email']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Resend the otp",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "An OTP has been sent to your email {{user_email}}",
+                        "data":{}
+                    }}
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Bad request",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "User does not exist",
+                        "data":{}
+                    }
+                }
+            ),
+
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Unable to send OTP",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Unable to send OTP",
+                        "data":{}
+                    }
+                }),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                description="Internal server error",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data":{}
+                    }})
+        }
+    )
     def post(self, request, *args, **kwargs) -> Response:
         """resend the otp"""
         try:
@@ -146,6 +265,51 @@ class UserLoginAPIView(APIView):
 
     serializer_class = LoginSerializer
 
+    @swagger_auto_schema(
+        operation_description="Login a user",
+        request_body=LoginSerializer,
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+
+                description="Login successful",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "Login Successful",
+                        "data": {
+                            "access_token": "eyJ______________________",
+                            "refresh_token": "eyJ______________________",
+                            "expires_in": 3600
+                        },
+                        "data":{}
+                    }}),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Bad request",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": {
+                            "email": ["This field is required."],
+                            "password": ["This field is required."]
+                        },
+                        "data":{}
+                    }
+                }),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                description="Internal server error",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data":{}
+                    }
+                }
+            )
+        }
+    )
     def post(self, request, *args, **kwargs) -> Response:
         """Generates user access tokens"""
         try:
@@ -218,7 +382,6 @@ class SocialAuth(APIView):
             )
         except Exception:
             return handle_internal_server_exception()
-
 
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
 # TODO: implement password reset endpoints

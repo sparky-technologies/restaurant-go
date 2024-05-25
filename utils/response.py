@@ -2,7 +2,7 @@ from rest_framework.response import Response
 
 
 def service_response(
-    status: str = "success", data: dict = {}, message: str = "", status_code=200
+        status: str = "success", data: dict = {}, message: str = "", status_code=200
 ) -> Response:
     """Api response utils functions
 
