@@ -32,7 +32,7 @@ def send_otp(email: Union[str, None], username: Union[str, None]) -> Union[str, 
         message = f"""
         Your One Time Password is {otp}
         <br />
-        Expires in 10 minutes   
+        Expires in 10 minutes
         """
         sendmail(
             subject="Email Verification Code",
