@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from utils.utils import send_otp
+from utils.utils import send_otp, send_reset_otp
 from .serializers import LoginSerializer, UserSerializer
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
@@ -13,6 +13,7 @@ from drf_yasg.utils import swagger_auto_schema
 from .models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
+from rest_framework import status
 
 
 class CreateUserAPIView(APIView):
@@ -220,8 +221,40 @@ class SocialAuth(APIView):
 
 
 class PasswordResetView(APIView):
-    """Sends restet """
+    """Sends reset to a user"""
 
+    def post(self, request):
+        """
+        Post handler for sending reset OTP
+        """
+        email: Union[str, None] = request.data.get("email")
+        if not email:
+            return Response(
+                {"status": "error", "message": "Please provide an email address"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"status": "error", "message": "Please provide a valid email address"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        otp: Union[str, None] = send_reset_otp(email)
+        if otp:
+            key = f'Reset_Token:{otp}'
+            cache.set(key, otp, 60 * 10)
+            return Response(
+                {"status": "success", "message": _(f"Reset OTP has been sent to your email {email}")},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"status": "error", "message": "Failed to send reset OTP"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
 # TODO: implement password reset endpoints
 # TODO: implement change password endpoint should required authentication
