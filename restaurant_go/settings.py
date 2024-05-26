@@ -274,9 +274,11 @@ except Exception:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv("url") if os.getenv("url") else "redis://:G2d5EtNm06LwWJXu97Tn143BcYAQ8kjg@fra1.clusters.zeabur.com:31017",
+        "LOCATION": os.getenv("REDIS_URL") if os.getenv("REDIS_URL") else "redis://:G2d5EtNm06LwWJXu97Tn143BcYAQ8kjg@fra1.clusters.zeabur.com:31017",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
 }
+
+print(f'Cache: {CACHES["default"]["LOCATION"]}')

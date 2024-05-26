@@ -84,7 +84,6 @@ class VerifyOTP(APIView):
             otp: Union[str, None] = request.data.get("otp")
             # retrieve otp from cache with the email
             cache_otp: Union[str, None] = cache.get(email)
-            print(cache_otp)
             if otp is None:
                 return service_response(
                     status="error", message=_("Invalid OTP"), status_code=400
@@ -219,6 +218,9 @@ class SocialAuth(APIView):
         except Exception:
             return handle_internal_server_exception()
 
+
+class PasswordResetView(APIView):
+    """Sends restet """
 
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
 # TODO: implement password reset endpoints
