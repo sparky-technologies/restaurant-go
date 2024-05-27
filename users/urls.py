@@ -47,5 +47,5 @@ urlpatterns = [
     path("login", UserLoginAPIView.as_view(), name="login"),
     path("token/refresh", decorated_refresh, name="token_refresh"),
     path("social_auth", SocialAuth.as_view(), name="social_auth"),
-    path("wallet", WalletView.as_view(), name="wallet_balance")
+    path("wallet", WalletView.as_view(), name="wallet")
 ]

@@ -140,6 +140,52 @@ class VerifyOTP(APIView):
     Verify the otp sent to the user email address
     """
 
+    @swagger_auto_schema(
+        operation_description="Verify the otp",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            description="Information needed for verification",
+            required=["email", "otp"],
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING, default="example@mail.com"),
+                "otp": openapi.Schema(type=openapi.TYPE_STRING, default="123456")
+            },
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Successful verification",
+                schema=ResponseSerializer,
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "OTP verified",
+                        "data": {}
+                    }
+                }
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Expired or invalid otp send with request.",
+                schema=ResponseSerializer,
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Invalid OTP",
+                        "data": {}
+                    }
+                }
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                schema=ResponseSerializer(),
+                description="Internal server error",
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data": {}
+                    }}
+            ),
+        }
+    )
     def post(self, request, *args, **kwargs) -> Response:
         """Post handler to verify the otp sent to the user"""
         try:
@@ -387,6 +433,46 @@ class SocialAuth(APIView):
 class WalletView(APIView):
     """View to get the user wallet balance"""
 
+    @swagger_auto_schema(
+        operation_description="Get the user wallet balance",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Wallet balance retrieved",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "Wallet balance retrieved",
+                        "data": {
+                            "wallet_balance": 0
+                        }
+                    }
+                }
+            ),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response(
+                description="User not authenticated",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "User not authenticated",
+                        "data": {}
+                    }
+                }
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                description="Internal server error",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data": {}
+                    }
+                }
+            )
+        }
+    )
     def get(self, request, *args, **kwargs) -> Response:
         """Get the user wallet balance"""
 
