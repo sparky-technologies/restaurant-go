@@ -37,7 +37,7 @@ class CreateUserAPIView(APIView):
                     "application/json": {
                         "status": "success",
                         "message": "Registration Successful, An OTP has been sent to your email",
-                        "data":{}
+                        "data": {}
                     }
                 }
             ),
@@ -48,7 +48,7 @@ class CreateUserAPIView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "User with username|email already exists.",
-                        "data":{}
+                        "data": {}
                     }
                 }
             ),
@@ -59,7 +59,7 @@ class CreateUserAPIView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Unable to send OTP",
-                        "data":{}
+                        "data": {}
                     }
                 }
             )
@@ -71,7 +71,7 @@ class CreateUserAPIView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Internal server error",
-                        "data":{}
+                        "data": {}
                     }}
             ),
         },
@@ -122,7 +122,7 @@ class RootPage(APIView):
                     "application/json": {
                         "status": "success",
                         "message": "Great, Welcome all good!",
-                        "data":{}
+                        "data": {}
                     }
 
                 }
@@ -196,7 +196,7 @@ class ResendOTP(APIView):
                     "application/json": {
                         "status": "success",
                         "message": "An OTP has been sent to your email {{user_email}}",
-                        "data":{}
+                        "data": {}
                     }}
             ),
             status.HTTP_400_BAD_REQUEST: openapi.Response(
@@ -206,7 +206,7 @@ class ResendOTP(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "User does not exist",
-                        "data":{}
+                        "data": {}
                     }
                 }
             ),
@@ -218,7 +218,7 @@ class ResendOTP(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Unable to send OTP",
-                        "data":{}
+                        "data": {}
                     }
                 }),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
@@ -228,7 +228,7 @@ class ResendOTP(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Internal server error",
-                        "data":{}
+                        "data": {}
                     }})
         }
     )
@@ -282,7 +282,7 @@ class UserLoginAPIView(APIView):
                             "refresh_token": "eyJ______________________",
                             "expires_in": 3600
                         },
-                        "data":{}
+                        "data": {}
                     }}),
             status.HTTP_400_BAD_REQUEST: openapi.Response(
                 description="Bad request",
@@ -294,7 +294,7 @@ class UserLoginAPIView(APIView):
                             "email": ["This field is required."],
                             "password": ["This field is required."]
                         },
-                        "data":{}
+                        "data": {}
                     }
                 }),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
@@ -304,7 +304,7 @@ class UserLoginAPIView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Internal server error",
-                        "data":{}
+                        "data": {}
                     }
                 }
             )
@@ -379,6 +379,31 @@ class SocialAuth(APIView):
                 status="error",
                 message="User with the email or username already exist",
                 status_code=400,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class WalletView(APIView):
+    """View to get the user wallet balance"""
+
+    def get(self, request, *args, **kwargs) -> Response:
+        """Get the user wallet balance"""
+
+        try:
+            if not request.user.is_authenticated:
+                return service_response(
+                    status="error",
+                    message="User not authenticated",
+                    status_code=401,
+                )
+            user = request.user
+            wallet_balance = user.wallet_balance
+            return service_response(
+                status="success",
+                message="Wallet balance retrieved",
+                data={"wallet_balance": wallet_balance},
+                status_code=200,
             )
         except Exception:
             return handle_internal_server_exception()
