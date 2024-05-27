@@ -89,6 +89,7 @@ class User(AbstractUser, PermissionsMixin):
     bvn = models.CharField(
         max_length=11, null=True, blank=True, help_text=_("User BVN Number")
     )
+    reset_token = models.CharField(max_length=6, null=True, blank=True)
 
     class Meta:
         db_table = 'users'

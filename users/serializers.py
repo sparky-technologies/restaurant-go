@@ -112,3 +112,10 @@ class LoginSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("email", "username", "password")
+
+
+class ChangePasswordSerializer(ModelSerializer):
+    """Serializer for changing a user password"""
+    class Meta:
+        model = User
+        fields = ("password", "reset_token")

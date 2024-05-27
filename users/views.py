@@ -1,11 +1,10 @@
 from typing import Union
 from django.db import IntegrityError
-from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from utils.utils import send_otp, send_reset_otp
-from .serializers import LoginSerializer, UserSerializer
+from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
@@ -221,7 +220,7 @@ class SocialAuth(APIView):
 
 
 class PasswordResetView(APIView):
-    """Sends reset to a user"""
+    """Sends reset token to a user"""
 
     def post(self, request):
         """
@@ -229,32 +228,81 @@ class PasswordResetView(APIView):
         """
         email: Union[str, None] = request.data.get("email")
         if not email:
-            return Response(
-                {"status": "error", "message": "Please provide an email address"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return service_response(
+                status="error",
+                message="Please provide an email address",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            User.objects.get(email=email)
+            user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response(
-                {"status": "error", "message": "Please provide a valid email address"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return service_response(
+                status="error",
+                message="Please provide a valid email address",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         otp: Union[str, None] = send_reset_otp(email)
         if otp:
             key = f'Reset_Token:{otp}'
+            user.reset_token = otp
+            user.save()
             cache.set(key, otp, 60 * 10)
-            return Response(
-                {"status": "success", "message": _(f"Reset OTP has been sent to your email {email}")},
-                status=status.HTTP_200_OK,
+            return service_response(
+                status="success",
+                message=(f"Reset OTP has been sent to your email {email}"),
+                status_code=status.HTTP_200_OK,
             )
         else:
-            return Response(
-                {"status": "error", "message": "Failed to send reset OTP"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            return service_response(
+                status="error",
+                message="Failed to send reset OTP",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ChangePasswordView(APIView):
+    """
+    Updates a user password
+    """
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        """
+        POST request handler for updating user password
+        """
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            token = serializer.validated_data.get("reset_token")
+            password = serializer.validated_data.get("password")
+            try:
+                user = User.objects.get(reset_token=token)
+                key = f'Reset_Token:{token}'
+                if cache.get(key):
+                    user.set_password(password)
+                    user.reset_token = None
+                    user.save()
+                    return service_response(
+                        status="sucess",
+                        message="Password sucessfully updated",
+                        status_code=status.HTTP_200_OK
+                    )
+                return service_response(
+                    status="error",
+                    message="Invalid or expired RESET OTP",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            except User.DoesNotExist:
+                return service_response(
+                    status="error",
+                    message="Invalid or expired RESET OTP",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+        return service_response(
+            status="error",
+            message=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
-# TODO: implement password reset endpoints
 # TODO: implement change password endpoint should required authentication
