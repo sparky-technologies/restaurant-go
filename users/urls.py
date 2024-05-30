@@ -12,5 +12,6 @@ urlpatterns = [
     path("token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
     path("social_auth", SocialAuth.as_view(), name="social_auth"),
     path("reset-password", PasswordResetView.as_view(), name="Reset-Password"),
-    path("change-password", ChangePasswordView.as_view(), name='Change-Password')
+    path("change-password", ChangePasswordView.as_view(), name='Change-Password'),
+    path("update-password", UpdatePasswordView.as_view(), name="Update-Authenticated-user-password")
 ]

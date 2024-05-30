@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from utils.utils import send_otp, send_reset_otp
-from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer
+from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer, UpdatePasswordSerializer
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
@@ -13,6 +13,7 @@ from .models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 
 class CreateUserAPIView(APIView):
@@ -299,6 +300,32 @@ class ChangePasswordView(APIView):
                     message="Invalid or expired RESET OTP",
                     status_code=status.HTTP_400_BAD_REQUEST,
                 )
+        return service_response(
+            status="error",
+            message=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class UpdatePasswordView(APIView):
+    """View for updating an authenticated user password"""
+    serializer_class = UpdatePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """POST request handler"""
+        serializer = self.serializer_class(data=request.data)
+        print(request.user)
+        if serializer.is_valid():
+            password = serializer.validated_data.get("password")
+            user = User.objects.get(email=request.user.email)
+            user.set_password(password)
+            user.save()
+            return service_response(
+                status="sucess",
+                message="Password sucessfully updated",
+                status_code=status.HTTP_200_OK
+            )
         return service_response(
             status="error",
             message=serializer.errors,

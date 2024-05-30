@@ -119,3 +119,10 @@ class ChangePasswordSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("password", "reset_token")
+
+
+class UpdatePasswordSerializer(ModelSerializer):
+    """Serializer for updating a user password"""
+    class Meta:
+        model = User
+        fields = ("password", )
