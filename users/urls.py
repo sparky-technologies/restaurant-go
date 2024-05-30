@@ -1,5 +1,14 @@
 from django.urls import path
-from .views import *
+from .views import (
+    CreateUserAPIView,
+    VerifyOTP,
+    ResendOTP,
+    UserLoginAPIView,
+    SocialAuth,
+    PasswordResetView,
+    ChangePasswordView,
+    UpdatePasswordView
+)
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )

@@ -315,7 +315,6 @@ class UpdatePasswordView(APIView):
     def post(self, request):
         """POST request handler"""
         serializer = self.serializer_class(data=request.data)
-        print(request.user)
         if serializer.is_valid():
             password = serializer.validated_data.get("password")
             user = User.objects.get(email=request.user.email)
@@ -332,4 +331,3 @@ class UpdatePasswordView(APIView):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
-# TODO: implement change password endpoint should required authentication
