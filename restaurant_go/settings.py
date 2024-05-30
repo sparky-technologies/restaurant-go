@@ -18,6 +18,9 @@ from django.utils.log import DEFAULT_LOGGING
 import os
 from typing import Union
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,7 +35,7 @@ SECRET_KEY = "django-insecure-ydal4wy$2pq6@r$x=gdgo%b!i7bh1l5ag$^uh2hbcipwxk4(n4
 DEBUG = True
 
 dev: Union[str, None] = os.getenv("dev")
-
+print(f"Dev: {dev}")
 ALLOWED_HOSTS = ["*"]
 
 
@@ -92,9 +95,13 @@ WSGI_APPLICATION = "restaurant_go.wsgi.application"
 
 
 db_dict: Dict = {
-    "aref": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    "areef": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("DEV_NAME"),
+        "USER": os.getenv("DEV_USER"),
+        "PASSWORD": os.getenv("DEV_PASSWORD"),
+        "HOST": os.getenv("DEV_HOST"),
+        "PORT": os.getenv("DEV_PORT"),
     },
     "ayo": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -267,9 +274,11 @@ except Exception:
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://:G2d5EtNm06LwWJXu97Tn143BcYAQ8kjg@fra1.clusters.zeabur.com:31017",
+        "LOCATION": os.getenv("REDIS_URL") if os.getenv("REDIS_URL") else "redis://:G2d5EtNm06LwWJXu97Tn143BcYAQ8kjg@fra1.clusters.zeabur.com:31017",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
 }
+
+print(f'Cache: {CACHES["default"]["LOCATION"]}')

@@ -1,22 +1,19 @@
-from datetime import datetime
 from typing import Union
-
-from django.core.cache import cache
 from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework.response import Response
+from utils.utils import send_otp, send_reset_otp
+from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer, UpdatePasswordSerializer
+from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
-from utils.utils import send_otp
+from drf_yasg.utils import swagger_auto_schema
 from .models import User
-from .serializers import LoginSerializer, UserSerializer
-from .swagger_serializer import ResponseSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import datetime
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 
 class CreateUserAPIView(APIView):
@@ -30,50 +27,9 @@ class CreateUserAPIView(APIView):
         request_body=UserSerializer,
         operation_description="Create a new user",
         responses={
-            status.HTTP_201_CREATED: openapi.Response(
-                schema=ResponseSerializer(),
-                description="User created successfully",
-                examples={
-                    "application/json": {
-                        "status": "success",
-                        "message": "Registration Successful, An OTP has been sent to your email",
-                        "data":{}
-                    }
-                }
-            ),
-            status.HTTP_400_BAD_REQUEST: openapi.Response(
-                schema=ResponseSerializer(),
-                description="Bad request",
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "User with username|email already exists.",
-                        "data":{}
-                    }
-                }
-            ),
-            status.HTTP_404_NOT_FOUND: openapi.Response(
-                schema=ResponseSerializer(),
-                description="Unable to send OTP",
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "Unable to send OTP",
-                        "data":{}
-                    }
-                }
-            )
-            ,
-            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-                schema=ResponseSerializer(),
-                description="Internal server error",
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "Internal server error",
-                        "data":{}
-                    }}
-            ),
+            201: "Registration successful, An OTP has been sent to your email",
+            400: "Bad request",
+            500: "Internal server error",
         },
     )
     def post(self, request) -> Response:
@@ -111,24 +67,6 @@ class CreateUserAPIView(APIView):
 
 
 class RootPage(APIView):
-
-    @swagger_auto_schema(
-        operation_description="Root page",
-        responses={
-            status.HTTP_200_OK: openapi.Response(
-                description="Root page api response",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "success",
-                        "message": "Great, Welcome all good!",
-                        "data":{}
-                    }
-
-                }
-            )
-        }
-    )
     def get(self, request, format=None):
         return service_response(
             status="success", message="Great, Welcome all good!", status_code=200
@@ -147,7 +85,6 @@ class VerifyOTP(APIView):
             otp: Union[str, None] = request.data.get("otp")
             # retrieve otp from cache with the email
             cache_otp: Union[str, None] = cache.get(email)
-            print(cache_otp)
             if otp is None:
                 return service_response(
                     status="error", message=_("Invalid OTP"), status_code=400
@@ -176,62 +113,6 @@ class ResendOTP(APIView):
     Resend the otp to the user email address
     """
 
-    @swagger_auto_schema(
-        operation_description="Resend the otp",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "email": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="The email address",
-                    example="example@mail.com",
-                )
-            },
-            required=['email']
-        ),
-        responses={
-            status.HTTP_200_OK: openapi.Response(
-                description="Resend the otp",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "success",
-                        "message": "An OTP has been sent to your email {{user_email}}",
-                        "data":{}
-                    }}
-            ),
-            status.HTTP_400_BAD_REQUEST: openapi.Response(
-                description="Bad request",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "User does not exist",
-                        "data":{}
-                    }
-                }
-            ),
-
-            status.HTTP_404_NOT_FOUND: openapi.Response(
-                description="Unable to send OTP",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "Unable to send OTP",
-                        "data":{}
-                    }
-                }),
-            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-                description="Internal server error",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "Internal server error",
-                        "data":{}
-                    }})
-        }
-    )
     def post(self, request, *args, **kwargs) -> Response:
         """resend the otp"""
         try:
@@ -265,51 +146,6 @@ class UserLoginAPIView(APIView):
 
     serializer_class = LoginSerializer
 
-    @swagger_auto_schema(
-        operation_description="Login a user",
-        request_body=LoginSerializer,
-        responses={
-            status.HTTP_200_OK: openapi.Response(
-
-                description="Login successful",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "success",
-                        "message": "Login Successful",
-                        "data": {
-                            "access_token": "eyJ______________________",
-                            "refresh_token": "eyJ______________________",
-                            "expires_in": 3600
-                        },
-                        "data":{}
-                    }}),
-            status.HTTP_400_BAD_REQUEST: openapi.Response(
-                description="Bad request",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": {
-                            "email": ["This field is required."],
-                            "password": ["This field is required."]
-                        },
-                        "data":{}
-                    }
-                }),
-            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-                description="Internal server error",
-                schema=ResponseSerializer(),
-                examples={
-                    "application/json": {
-                        "status": "error",
-                        "message": "Internal server error",
-                        "data":{}
-                    }
-                }
-            )
-        }
-    )
     def post(self, request, *args, **kwargs) -> Response:
         """Generates user access tokens"""
         try:
@@ -383,6 +219,115 @@ class SocialAuth(APIView):
         except Exception:
             return handle_internal_server_exception()
 
+
+class PasswordResetView(APIView):
+    """Sends reset token to a user"""
+
+    def post(self, request):
+        """
+        Post handler for sending reset OTP
+        """
+        email: Union[str, None] = request.data.get("email")
+        if not email:
+            return service_response(
+                status="error",
+                message="Please provide an email address",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return service_response(
+                status="error",
+                message="Please provide a valid email address",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        otp: Union[str, None] = send_reset_otp(email)
+        if otp:
+            key = f'Reset_Token:{otp}'
+            user.reset_token = otp
+            user.save()
+            cache.set(key, otp, 60 * 10)
+            return service_response(
+                status="success",
+                message=(f"Reset OTP has been sent to your email {email}"),
+                status_code=status.HTTP_200_OK,
+            )
+        else:
+            return service_response(
+                status="error",
+                message="Failed to send reset OTP",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ChangePasswordView(APIView):
+    """
+    Updates a user password
+    """
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        """
+        POST request handler for updating user password
+        """
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            token = serializer.validated_data.get("reset_token")
+            password = serializer.validated_data.get("password")
+            try:
+                user = User.objects.get(reset_token=token)
+                key = f'Reset_Token:{token}'
+                if cache.get(key):
+                    user.set_password(password)
+                    user.reset_token = None
+                    user.save()
+                    return service_response(
+                        status="sucess",
+                        message="Password sucessfully updated",
+                        status_code=status.HTTP_200_OK
+                    )
+                return service_response(
+                    status="error",
+                    message="Invalid or expired RESET OTP",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            except User.DoesNotExist:
+                return service_response(
+                    status="error",
+                    message="Invalid or expired RESET OTP",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+        return service_response(
+            status="error",
+            message=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class UpdatePasswordView(APIView):
+    """View for updating an authenticated user password"""
+    serializer_class = UpdatePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """POST request handler"""
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            password = serializer.validated_data.get("password")
+            user = User.objects.get(email=request.user.email)
+            user.set_password(password)
+            user.save()
+            return service_response(
+                status="sucess",
+                message="Password sucessfully updated",
+                status_code=status.HTTP_200_OK
+            )
+        return service_response(
+            status="error",
+            message=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
-# TODO: implement password reset endpoints
-# TODO: implement change password endpoint should required authentication

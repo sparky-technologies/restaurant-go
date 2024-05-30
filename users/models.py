@@ -5,9 +5,8 @@ from django.contrib.auth.models import PermissionsMixin
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 import logging
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 import traceback
 from django.db import transaction
 from phonenumber_field.modelfields import PhoneNumberField
@@ -89,8 +88,10 @@ class User(AbstractUser, PermissionsMixin):
     bvn = models.CharField(
         max_length=11, null=True, blank=True, help_text=_("User BVN Number")
     )
+    reset_token = models.CharField(max_length=6, null=True, blank=True)
 
     class Meta:
+        db_table = 'users'
         verbose_name = _("User")
         verbose_name_plural = _("Users")
 
