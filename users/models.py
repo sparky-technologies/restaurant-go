@@ -112,6 +112,115 @@ class User(AbstractUser, PermissionsMixin):
         self.last_name = last_name
         self.save()
 
+    def _create_wallet_summary(
+        self,
+        amount: str,
+        description: str,
+        previous_balance: str,
+        after_balance: str,
+        status: str,
+        order_id: str,
+    ) -> None:
+        """Create a new wallet summary instance.
+
+        Args:
+            amount (str): amount paid or debited
+            description (str): wallet summary description
+            previous_balance (str): previous wallet balance of the user
+            after_balance (str): newly updated wallet balance of the user
+            status (str): status of the wallet summary
+            product_type (str): product type of the wallet summary
+            tran_id (str): order id
+
+        Returns:
+            None: None
+        """
+        try:
+            WalletSummary.objects.create(
+                user=self,
+                amount=amount,
+                description=description,
+                previous_balance=previous_balance,
+                after_balance=after_balance,
+                status=status,
+                order_id=order_id,
+            )
+        except Exception as e:
+            logger.error(e)
+            logger.error(traceback.format_exc())
+
+    @classmethod
+    def debit(cls, id, amount, description, order_id) -> str:
+        """Debits a user
+
+        Args:
+            id (int): user's id
+            amount (float): amount
+            product_type (str): product type
+            description (str): description
+            order_id (str): order id
+
+        Returns:
+            str: message description
+        """
+        try:
+            with transaction.atomic():
+                user = cls.objects.select_for_update().get(id=id)
+                previous_balance = user.wallet_balance
+                if previous_balance < amount or amount < 0:
+                    return "Low Funds"
+                user.wallet_balance -= float(amount)
+                user._create_wallet_summary(
+                    amount=amount,
+                    description=description,
+                    previous_balance=previous_balance,
+                    after_balance=(previous_balance - float(amount)),
+                    status="Successful",
+                    order_id=order_id,
+                )
+                user.save()
+                return "Debited"
+        except Exception as e:
+            logger.error(e)
+            traceback.print_exc()
+            logger.error(traceback.format_exc())
+            return "Error"
+
+    @classmethod
+    def deposit(cls, id, amount, description, order_id) -> bool:
+        """Deposit fund for a user
+
+        Args:
+            id (user id): user's id
+            amount (_type_): amount to be deposited
+            product_type (_type_): product type of the deposit
+            description (_type_): description of the deposit
+            order_id (_type_): order id
+
+        Returns:
+            bool: True or False
+        """
+        try:
+            with transaction.atomic():
+                user = cls.objects.select_for_update().get(id=id)
+                previous_balance = user.wallet_balance
+                user.wallet_balance += float(amount)
+                user._create_wallet_summary(
+                    amount=amount,
+                    description=description,
+                    previous_balance=previous_balance,
+                    after_balance=(previous_balance + float(amount)),
+                    status="Successful",
+                    order_id=order_id,
+                )
+                user.save()
+                return True
+        except Exception as e:
+            logger.error(e)
+            traceback.print_exc()
+            logger.error(traceback.format_exc())
+            return False
+
 
 statuses = (
     ("Successful", "Successful"),
