@@ -10,6 +10,7 @@ from django.core.validators import MinValueValidator
 import traceback
 from django.db import transaction
 from phonenumber_field.modelfields import PhoneNumberField
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class User(AbstractUser, PermissionsMixin):
     reset_token = models.CharField(max_length=6, null=True, blank=True)
 
     class Meta:
-        db_table = 'users'
+        db_table = "users"
         verbose_name = _("User")
         verbose_name_plural = _("Users")
 
@@ -110,3 +111,79 @@ class User(AbstractUser, PermissionsMixin):
         self.first_name = first_name
         self.last_name = last_name
         self.save()
+
+
+statuses = (
+    ("Successful", "Successful"),
+    ("Pending", "Pending"),
+    ("Rejected", "Rejected"),
+)
+
+
+class Funding(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        editable=False,
+        blank=False,
+        null=True,
+        related_name="funding_history",
+    )
+    ref = models.CharField(
+        max_length=50, null=True, blank=True, verbose_name=_("Payment Reference")
+    )
+    amount = models.FloatField(default=0.00, null=True, blank=True)
+    status = models.CharField(
+        max_length=50, null=True, blank=True, choices=statuses, default="Pending"
+    )
+    gateway = models.CharField(max_length=50, null=True, blank=True, default="Monnify")
+    date_created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name_plural = "Fundings  Transactions"
+        verbose_name = "Funding Transaction"
+
+    def __str__(self):
+        return f"Funding Transaction with {self.ref} for {self.user.username}"
+
+
+status_choice = (
+    ("Successful", "Successful"),
+    ("Pending", "Pending"),
+    ("Failed", "Failed"),
+)
+
+
+class WalletSummary(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        editable=False,
+        blank=False,
+        null=True,
+        related_name="wallet_summary",
+    )
+    amount = models.CharField(
+        max_length=50, blank=True, null=True, help_text="Amount Debited or Deposited"
+    )
+    description = models.CharField(
+        max_length=200, blank=True, null=True, help_text="Description of the order"
+    )
+    previous_balance = models.CharField(
+        max_length=200, blank=True, help_text="Previous Wallet Balance", null=True
+    )
+    after_balance = models.CharField(
+        max_length=200, blank=True, help_text="Newly Updated Wallet Balance", null=True
+    )
+    status = models.CharField(
+        max_length=100, blank=True, null=True, choices=status_choice
+    )
+    order_id = models.CharField(max_length=100, blank=True, null=True)
+    date_created = models.DateTimeField(default=timezone.now)
+
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.amount} Summary"
+
+    class Meta:
+        verbose_name_plural = "Wallet Summary"
+        verbose_name = "Wallet Summary"
