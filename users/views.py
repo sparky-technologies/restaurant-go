@@ -33,6 +33,12 @@ logger = logging.getLogger(__name__)
 
 machine = os.getenv("MACHINE")
 
+base_url = os.getenv("MONNIFY_BASE_URL")
+api_key = os.getenv("MONNIFY_API_KEY")
+secret_key = os.getenv("MONNIFY_SECRET_KEY")
+contract_code = os.getenv("MONNIFY_CONTRACT_CODE")
+auth_url = f"{base_url}/api/v1/auth/login"
+
 
 class CreateUserAPIView(APIView):
     """
@@ -444,13 +450,6 @@ class MonnifyCardChargeAPIView(APIView):
                     )
                 # monnify card charge
             if amount:
-                base_url = os.getenv("MONNIFY_BASE_URL")
-                api_key = os.getenv("MONNIFY_API_KEY")
-                secret_key = os.getenv("MONNIFY_SECRET_KEY")
-                contract_code = os.getenv("MONNIFY_CONTRACT_CODE")
-
-                auth_url = f"{base_url}/api/v1/auth/login"
-
                 response = requests.post(
                     auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
                 )
@@ -516,7 +515,83 @@ class MonnifyCardChargeAPIView(APIView):
                     status="error", message="Card Charge Failed", status_code=400
                 )
 
-        except Exception as e:
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class MonnifyTransferAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            print(user)
+            data = request.data
+            amount = data.get("amount")
+            if amount:
+                response = requests.post(
+                    auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
+                )
+                token = response.json()["responseBody"]["accessToken"]
+                referrence_id = str(uuid.uuid4())[:8]
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(token),
+                }
+                body = {
+                    "amount": float(amount),
+                    "customerName": f"{user.username}",
+                    "customerEmail": f"{user.email}",
+                    "paymentReference": f"{referrence_id}",
+                    "paymentDescription": f"Restaurant Go Wallet Funding by {user.username} at {datetime.now()}",
+                    "currencyCode": "NGN",
+                    "contractCode": f"{contract_code}",
+                    # "redirectUrl": f"{redirect_url}",
+                    "paymentMethods": ["ACCOUNT_TRANSFER"],
+                }
+                data = json.dumps(body)
+                url = f"{base_url}/api/v1/merchant/transactions/init-transaction"
+                response = requests.post(url, headers=headers, data=data)
+                res = response.json()
+                print(res)
+                # checkout_url = res["responseBody"]["checkoutUrl"]
+                tran_ref = res["responseBody"]["transactionReference"]
+                init_tran_url = f"{base_url}/api/v1/merchant/bank-transfer/init-payment"
+                print(init_tran_url)
+                body = {"transactionReference": f"{tran_ref}", "bankCode": "035"}
+                init_data = json.dumps(body)
+                payment_response = requests.post(
+                    init_tran_url, data=init_data, headers=headers
+                )
+                res = payment_response.json()
+                print(res)
+                res_body = res.get("responseBody")
+                expiry_time = res_body["expiresOn"]
+                amount = res_body["amount"]
+                # 0.5% charge fee
+                fee = round(float(amount) * 0.005)
+                acct_details = {
+                    "account_number": res_body["accountNumber"],
+                    "account_name": res_body["accountName"],
+                    "bank_name": res_body["bankName"],
+                    "bank_code": res_body["bankCode"],
+                    "charges_fee": fee,
+                    "expiry_time": expiry_time,
+                    "ussd": res_body["ussdPayment"],
+                    "tran_ref": res_body["transactionReference"],
+                    "amount": amount,
+                }
+                return service_response(
+                    status="success",
+                    message="Account details generated successfully",
+                    data=acct_details,
+                    status_code=200,
+                )
+            else:
+                return service_response(
+                    status="error", message="Amount is required", status_code=400
+                )
+        except Exception:
             return handle_internal_server_exception()
 
 
