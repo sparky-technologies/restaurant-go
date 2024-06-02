@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CreateUserAPIView,
     MonnifyCardChargeAPIView,
+    MonnifyPaymentWebhook,
     MonnifyTransferAPIView,
     VerifyOTP,
     ResendOTP,
@@ -102,4 +103,5 @@ urlpatterns = [
     ),
     path("funding/card", MonnifyCardChargeAPIView.as_view(), name="funding-card"),
     path("funding/tranfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
+    path("funding/webhook", MonnifyPaymentWebhook.as_view(), name="funding-webhook"),
 ]

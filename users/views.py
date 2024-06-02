@@ -1,6 +1,8 @@
+import hmac
 import json
 from typing import Union
 from django.db import IntegrityError
+from django.http import HttpResponse, HttpResponseForbidden
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,7 +17,7 @@ from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
-from .models import User
+from .models import User, Funding
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from rest_framework import status
@@ -26,6 +28,8 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 import uuid
+import hashlib
+import urllib.parse
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +74,9 @@ class CreateUserAPIView(APIView):
                 otp: Union[str, None] = send_otp(email, username)
                 if otp is None:
                     return service_response(
-                        status="error", message=_("Unable to send OTP"), status_code=404
+                        status="error",
+                        message=_("Unresple to send OTP"),
+                        status_code=404,
                     )
                 # cache the otp
                 cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
@@ -148,7 +154,7 @@ class ResendOTP(APIView):
             otp = send_otp(email, username)
             if otp is None:
                 return service_response(
-                    status="error", message=_("Unable to send OTP"), status_code=404
+                    status="error", message=_("Unresple to send OTP"), status_code=404
                 )
             # cache the otp
             cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
@@ -593,6 +599,101 @@ class MonnifyTransferAPIView(APIView):
                 )
         except Exception:
             return handle_internal_server_exception()
+
+
+class MonnifyPaymentWebhook(APIView):
+    """Monnify webhook controller for payment notifications"""
+
+    def post(self, request, *args, **kwargs):
+        """Post endpoint for the monnify webhook"""
+        try:
+            # get thr payload
+            data = request.body
+            dat = json.loads(data)
+            monnify_hashkey = request.META["HTTP_MONNIFY_SIGNATURE"]
+            forwarded_for = "{}".format(request.META.get("REMOTE_ADDR"))
+            monnify_secret = os.getenv("MONNIFY_SECRET_KEY")
+            monnify_api_key = os.getenv("MONNIFY_API_KEY")
+            monnify_base_url = os.getenv("MONNIFY_BASE_URL")
+            if machine == "local":
+                ip = "127.0.0.1"
+            else:
+                ip = "35.242.133.146"
+            secret = bytes(monnify_secret, "utf-8")
+            hashkey = hmac.new(secret, request.body, hashlib.sha512).hexdigest()
+            if hashkey == monnify_hashkey and forwarded_for == ip:
+                res = requests.post(
+                    f"{monnify_base_url}/api/v1/auth/login",
+                    auth=HTTPBasicAuth(f"{monnify_api_key}", f"{monnify_secret}"),
+                )
+                data = json.loads(res.text)
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(
+                        data["responseBody"]["accessToken"]
+                    ),
+                }
+                response = requests.get(
+                    "{}/api/v2/transactions/{}".format(
+                        monnify_base_url,
+                        urllib.parse.quote(dat["eventData"]["transactionReference"]),
+                    ),
+                    headers=headers,
+                )
+
+                resp = json.loads(response.text)
+
+                if (
+                    response.status_code == 200 and resp["requestSuccessful"] == True
+                ) and (
+                    resp["responseMessage"] == "success"
+                    and resp["responseBody"]["paymentStatus"] == "PAID"
+                ):
+                    user_email = dat["eventData"]["customer"]["email"]
+                    user = User.objects.get(email__iexact=user_email)
+                    amount = float(resp["responseBody"]["amountPaid"])
+                    our_fee = round(float(amount) * 0.005)
+
+                    paynow = float(amount) - float(our_fee)
+
+                    ref = resp["responseBody"]["transactionReference"]
+
+                    if not Funding.objects.filter(ref=ref).exists():
+                        try:
+                            user.deposit(
+                                user.id,
+                                paynow,
+                                "Wallet Funding",
+                                "Monnify Funding",
+                                ref,
+                            )
+                            Funding.objects.create(
+                                user=user,
+                                ref=ref,
+                                amount=paynow,
+                                status="Successful",
+                                gateway="monnify",
+                            )
+                            return HttpResponse(status=200)
+                        except Exception as e:
+                            logger.error(f"{e}")
+                            traceback.print_exc()
+                            return HttpResponse(status=200)
+
+                    else:
+                        pass
+
+                else:
+                    return HttpResponse(status=400)
+
+            else:
+                return HttpResponseForbidden("Permission denied.")
+
+        except Exception as e:
+            logger.error(f"{e}")
+            traceback.print_exc()
+            return HttpResponse(status=500)
 
 
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
