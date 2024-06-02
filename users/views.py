@@ -4,7 +4,12 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from utils.utils import send_otp, send_reset_otp
-from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer, UpdatePasswordSerializer
+from .serializers import (
+    LoginSerializer,
+    UserSerializer,
+    ChangePasswordSerializer,
+    UpdatePasswordSerializer,
+)
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
@@ -227,107 +232,120 @@ class PasswordResetView(APIView):
         """
         Post handler for sending reset OTP
         """
-        email: Union[str, None] = request.data.get("email")
-        if not email:
-            return service_response(
-                status="error",
-                message="Please provide an email address",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return service_response(
-                status="error",
-                message="Please provide a valid email address",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
+            email: Union[str, None] = request.data.get("email")
+            if not email:
+                return service_response(
+                    status="error",
+                    message="Please provide an email address",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
 
-        otp: Union[str, None] = send_reset_otp(email)
-        if otp:
-            key = f'Reset_Token:{otp}'
-            user.reset_token = otp
-            user.save()
-            cache.set(key, otp, 60 * 10)
-            return service_response(
-                status="success",
-                message=(f"Reset OTP has been sent to your email {email}"),
-                status_code=status.HTTP_200_OK,
-            )
-        else:
-            return service_response(
-                status="error",
-                message="Failed to send reset OTP",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return service_response(
+                    status="error",
+                    message="Please provide a valid email address",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            otp: Union[str, None] = send_reset_otp(email)
+            if otp:
+                key = f"Reset_Token:{otp}"
+                user.reset_token = otp
+                user.save()
+                cache.set(key, otp, 60 * 10)
+                return service_response(
+                    status="success",
+                    message=(f"Reset OTP has been sent to your email {email}"),
+                    status_code=status.HTTP_200_OK,
+                )
+            else:
+                return service_response(
+                    status="error",
+                    message="Failed to send reset OTP",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except Exception:
+            return handle_internal_server_exception()
 
 
 class ChangePasswordView(APIView):
     """
     Updates a user password
     """
+
     serializer_class = ChangePasswordSerializer
 
     def post(self, request):
         """
         POST request handler for updating user password
         """
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            token = serializer.validated_data.get("reset_token")
-            password = serializer.validated_data.get("password")
-            try:
-                user = User.objects.get(reset_token=token)
-                key = f'Reset_Token:{token}'
-                if cache.get(key):
-                    user.set_password(password)
-                    user.reset_token = None
-                    user.save()
+        try:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                token = serializer.validated_data.get("reset_token")
+                password = serializer.validated_data.get("password")
+                try:
+                    user = User.objects.get(reset_token=token)
+                    key = f"Reset_Token:{token}"
+                    if cache.get(key):
+                        user.set_password(password)
+                        user.reset_token = None
+                        user.save()
+                        return service_response(
+                            status="sucess",
+                            message="Password sucessfully updated",
+                            status_code=status.HTTP_200_OK,
+                        )
                     return service_response(
-                        status="sucess",
-                        message="Password sucessfully updated",
-                        status_code=status.HTTP_200_OK
+                        status="error",
+                        message="Invalid or expired RESET OTP",
+                        status_code=status.HTTP_400_BAD_REQUEST,
                     )
-                return service_response(
-                    status="error",
-                    message="Invalid or expired RESET OTP",
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                )
-            except User.DoesNotExist:
-                return service_response(
-                    status="error",
-                    message="Invalid or expired RESET OTP",
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                )
-        return service_response(
-            status="error",
-            message=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+                except User.DoesNotExist:
+                    return service_response(
+                        status="error",
+                        message="Invalid or expired RESET OTP",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+            return service_response(
+                status="error",
+                message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return handle_internal_server_exception()
 
 
 class UpdatePasswordView(APIView):
     """View for updating an authenticated user password"""
+
     serializer_class = UpdatePasswordSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """POST request handler"""
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            password = serializer.validated_data.get("password")
-            user = User.objects.get(email=request.user.email)
-            user.set_password(password)
-            user.save()
+        try:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                password = serializer.validated_data.get("password")
+                user = User.objects.get(email=request.user.email)
+                user.set_password(password)
+                user.save()
+                return service_response(
+                    status="sucess",
+                    message="Password sucessfully updated",
+                    status_code=status.HTTP_200_OK,
+                )
             return service_response(
-                status="sucess",
-                message="Password sucessfully updated",
-                status_code=status.HTTP_200_OK
+                status="error",
+                message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
-        return service_response(
-            status="error",
-            message=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        except Exception:
+            return handle_internal_server_exception()
+
+
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
