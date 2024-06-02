@@ -1,3 +1,4 @@
+import json
 from typing import Union
 from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
@@ -19,6 +20,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+import logging
+import traceback
+import os
+import requests
+from requests.auth import HTTPBasicAuth
+import uuid
+
+
+logger = logging.getLogger(__name__)
+
+
+machine = os.getenv("MACHINE")
 
 
 class CreateUserAPIView(APIView):
@@ -345,6 +358,165 @@ class UpdatePasswordView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
+            return handle_internal_server_exception()
+
+
+class MonnifyCardChargeAPIView(APIView):
+    """Charge User with their card details through monnify"""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        """Charge user with card details"""
+
+        def is_americanexpress(card_number: str) -> bool:
+            """checks if card is american express type
+
+            Args:
+                card_number (str): card number
+
+            Returns:
+                bool: True or false
+            """
+            if card_number.startswith("37") or card_number.startswith("34"):
+                return True
+            return False
+
+        def is_luhns_valid(card_number: str) -> bool:
+            """Luhns Algorithm to validate card number
+
+            Args:
+                card_number (str): card number
+
+            Returns:
+                bool: True or false
+            """
+            try:
+                if not (16 <= len(card_number) <= 19):
+                    return False
+                # convert to digitis
+                digits = list(map(int, card_number[::-1]))
+                total_sum = 0
+                for i, digit in enumerate(digits):
+                    if i % 2 == 1:
+                        digit *= 2
+                        if digit > 9:
+                            digit -= 9
+                    total_sum += digit
+                return total_sum % 10 == 0
+
+            except Exception as e:
+                logger.error(f"{e}")
+                traceback.print_exc()
+                return False
+
+        try:
+            card_number = request.data.get("card_number")
+            expiry_month = request.data.get("expiry_month")
+            expiry_year = request.data.get("expiry_year")
+            pin = request.data.get("pin")
+            cvv = request.data.get("cvv")
+            user = request.user
+            amount = request.data.get("amount")
+            card_date = datetime(int(expiry_year), int(expiry_month), 1)
+            today = datetime.now()
+            # bypass validation for dev mode
+            if machine != "local":
+                if card_date < today:
+                    return service_response(
+                        status="error", message="Card has Expired", status_code=400
+                    )
+                is_express = is_americanexpress(card_number)
+                is_luhn_valid = is_luhns_valid(card_number)
+                if is_express:
+                    if len(cvv) != 4:
+                        return service_response(
+                            status="error", message="Invalid CVV", status_code=400
+                        )
+                else:
+                    if len(cvv) != 3:
+                        return service_response(
+                            status="error", message="Invalid CVV", status_code=400
+                        )
+                if not is_luhn_valid:
+                    return service_response(
+                        status="error", message="Invalid Card Number", status_code=400
+                    )
+                # monnify card charge
+            if amount:
+                base_url = os.getenv("MONNIFY_BASE_URL")
+                api_key = os.getenv("MONNIFY_API_KEY")
+                secret_key = os.getenv("MONNIFY_SECRET_KEY")
+                contract_code = os.getenv("MONNIFY_CONTRACT_CODE")
+
+                auth_url = f"{base_url}/api/v1/auth/login"
+
+                response = requests.post(
+                    auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
+                )
+                token = response.json()["responseBody"]["accessToken"]
+
+                referrence_id = str(uuid.uuid4())[:8]
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(token),
+                }
+                body = {
+                    "amount": float(amount),
+                    "customerName": f"{user.username}",
+                    "customerEmail": f"{user.email}",
+                    "paymentReference": f"{referrence_id}",
+                    "paymentDescription": f"Restaurant Go Wallet Funding by {user.username} at {datetime.now()}",
+                    "currencyCode": "NGN",
+                    "contractCode": f"{contract_code}",
+                    # "redirectUrl": f"{redirect_url}",
+                    "paymentMethods": ["CARD"],
+                }
+                data = json.dumps(body)
+                url = f"{base_url}/api/v1/merchant/transactions/init-transaction"
+                response = requests.post(url, headers=headers, data=data)
+                res = response.json()
+                print(res)
+                tran_ref = res["responseBody"]["transactionReference"]
+                init_tran_url = f"{base_url}/api/v1/merchant/cards/charge"
+                charge_body = {
+                    "transactionReference": tran_ref,
+                    "collectionChannel": "API_NOTIFICATION",
+                    "card": {
+                        "number": card_number,
+                        "expiryMonth": expiry_month,
+                        "expiryYear": expiry_year,
+                        "pin": pin,
+                        "cvv": cvv,
+                    },
+                }
+                charge_data = json.dumps(charge_body)
+                payment_response = requests.post(
+                    init_tran_url, data=charge_data, headers=headers
+                )
+                res = payment_response.json()
+                print(res)
+                req_success = res.get("requestSuccessful")
+                res_message = res.get("responseMessage")
+                if req_success and res_message == "success":
+                    res_body = res.get("responseBody")
+                    if res_body["status"] == "SUCCESS":
+                        response = {
+                            "status": "success",
+                            "message": "Card Charge Successful",
+                            "data": res_body,
+                        }
+                        return service_response(
+                            status="success",
+                            message="Card Charge Successful",
+                            data=res_body,
+                            status_code=200,
+                        )
+                return service_response(
+                    status="error", message="Card Charge Failed", status_code=400
+                )
+
+        except Exception as e:
             return handle_internal_server_exception()
 
 
