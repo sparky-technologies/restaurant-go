@@ -45,7 +45,6 @@ api_key = os.getenv("MONNIFY_API_KEY_RG")
 secret_key = os.getenv("MONNIFY_SECRET_KEY_RG")
 contract_code = os.getenv("MONNIFY_CONTRACT_CODE_RG")
 auth_url = f"{base_url}/api/v1/auth/login"
-print(api_key, secret_key, contract_code)
 
 
 class CreateUserAPIView(APIView):
