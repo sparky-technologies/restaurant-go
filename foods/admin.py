@@ -7,10 +7,12 @@ from foods.models import FoodAsset, FoodItem, FoodPackage
 
 class FoodAssetAdmin(admin.StackedInline):
     model = FoodAsset
+    extra = 1
 
 
 class FoodItemStackedAdmin(admin.StackedInline):
     model = FoodItem
+    extra = 1
 
 
 class FoodPackageAdmin(admin.ModelAdmin):

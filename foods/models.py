@@ -27,9 +27,13 @@ class FoodPackage(models.Model):
 
 class FoodAsset(models.Model):
     name = models.CharField(max_length=100)
-    food_package = models.ForeignKey(FoodPackage, on_delete=models.CASCADE)
+    food_package = models.ForeignKey(
+        FoodPackage, on_delete=models.CASCADE, related_name="assets"
+    )
     image = models.ImageField(
-        upload_to="food_images", null=True, blank=True, related_name="assets"
+        upload_to="food_images",
+        null=True,
+        blank=True,
     )
     alt = models.CharField(max_length=30, null=True, blank=True)
 
