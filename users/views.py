@@ -30,6 +30,9 @@ from requests.auth import HTTPBasicAuth
 import uuid
 import hashlib
 import urllib.parse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 logger = logging.getLogger(__name__)
@@ -37,11 +40,12 @@ logger = logging.getLogger(__name__)
 
 machine = os.getenv("MACHINE")
 
-base_url = os.getenv("MONNIFY_BASE_URL")
-api_key = os.getenv("MONNIFY_API_KEY")
-secret_key = os.getenv("MONNIFY_SECRET_KEY")
-contract_code = os.getenv("MONNIFY_CONTRACT_CODE")
+base_url = os.getenv("MONNIFY_BASE_URL_RG")
+api_key = os.getenv("MONNIFY_API_KEY_RG")
+secret_key = os.getenv("MONNIFY_SECRET_KEY_RG")
+contract_code = os.getenv("MONNIFY_CONTRACT_CODE_RG")
 auth_url = f"{base_url}/api/v1/auth/login"
+print(api_key, secret_key, contract_code)
 
 
 class CreateUserAPIView(APIView):
@@ -538,6 +542,8 @@ class MonnifyTransferAPIView(APIView):
                 response = requests.post(
                     auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
                 )
+                print(api_key, secret_key)
+                print(response.json())
                 token = response.json()["responseBody"]["accessToken"]
                 referrence_id = str(uuid.uuid4())[:8]
                 headers = {
@@ -612,9 +618,9 @@ class MonnifyPaymentWebhook(APIView):
             dat = json.loads(data)
             monnify_hashkey = request.META["HTTP_MONNIFY_SIGNATURE"]
             forwarded_for = "{}".format(request.META.get("REMOTE_ADDR"))
-            monnify_secret = os.getenv("MONNIFY_SECRET_KEY")
-            monnify_api_key = os.getenv("MONNIFY_API_KEY")
-            monnify_base_url = os.getenv("MONNIFY_BASE_URL")
+            monnify_secret = os.getenv("MONNIFY_SECRET_KEY_RG")
+            monnify_api_key = os.getenv("MONNIFY_API_KEY_RG")
+            monnify_base_url = os.getenv("MONNIFY_BASE_URL_RG")
             if machine == "local":
                 ip = "127.0.0.1"
             else:
@@ -665,7 +671,6 @@ class MonnifyPaymentWebhook(APIView):
                                 user.id,
                                 paynow,
                                 "Wallet Funding",
-                                "Monnify Funding",
                                 ref,
                             )
                             Funding.objects.create(
@@ -679,7 +684,7 @@ class MonnifyPaymentWebhook(APIView):
                         except Exception as e:
                             logger.error(f"{e}")
                             traceback.print_exc()
-                            return HttpResponse(status=200)
+                            return HttpResponse(status=500)
 
                     else:
                         pass

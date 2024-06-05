@@ -102,6 +102,6 @@ urlpatterns = [
         name="Update-Authenticated-user-password",
     ),
     path("funding/card", MonnifyCardChargeAPIView.as_view(), name="funding-card"),
-    path("funding/tranfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
+    path("funding/transfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
     path("funding/webhook", MonnifyPaymentWebhook.as_view(), name="funding-webhook"),
 ]
