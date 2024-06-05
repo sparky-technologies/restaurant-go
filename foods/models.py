@@ -18,7 +18,7 @@ class FoodPackage(models.Model):
     date_updated = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.name + " " + self.price
+        return f"{self.name} {self.price}"
 
     class Meta:
         verbose_name = "Food Package"
