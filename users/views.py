@@ -1,19 +1,51 @@
+import hmac
+import json
 from typing import Union
 from django.db import IntegrityError
+from django.http import HttpResponse, HttpResponseForbidden
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from utils.utils import send_otp, send_reset_otp
-from .serializers import LoginSerializer, UserSerializer, ChangePasswordSerializer, UpdatePasswordSerializer
+from .serializers import (
+    LoginSerializer,
+    UserSerializer,
+    ChangePasswordSerializer,
+    UpdatePasswordSerializer,
+)
 from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
-from .models import User
+from .models import User, Funding
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+import logging
+import traceback
+import os
+import requests
+from requests.auth import HTTPBasicAuth
+import uuid
+import hashlib
+import urllib.parse
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+logger = logging.getLogger(__name__)
+
+
+machine = os.getenv("MACHINE")
+
+base_url = os.getenv("MONNIFY_BASE_URL_RG")
+api_key = os.getenv("MONNIFY_API_KEY_RG")
+secret_key = os.getenv("MONNIFY_SECRET_KEY_RG")
+contract_code = os.getenv("MONNIFY_CONTRACT_CODE_RG")
+auth_url = f"{base_url}/api/v1/auth/login"
+print(api_key, secret_key, contract_code)
 
 
 class CreateUserAPIView(APIView):
@@ -46,7 +78,9 @@ class CreateUserAPIView(APIView):
                 otp: Union[str, None] = send_otp(email, username)
                 if otp is None:
                     return service_response(
-                        status="error", message=_("Unable to send OTP"), status_code=404
+                        status="error",
+                        message=_("Unresple to send OTP"),
+                        status_code=404,
                     )
                 # cache the otp
                 cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
@@ -124,7 +158,7 @@ class ResendOTP(APIView):
             otp = send_otp(email, username)
             if otp is None:
                 return service_response(
-                    status="error", message=_("Unable to send OTP"), status_code=404
+                    status="error", message=_("Unresple to send OTP"), status_code=404
                 )
             # cache the otp
             cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
@@ -227,107 +261,444 @@ class PasswordResetView(APIView):
         """
         Post handler for sending reset OTP
         """
-        email: Union[str, None] = request.data.get("email")
-        if not email:
-            return service_response(
-                status="error",
-                message="Please provide an email address",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return service_response(
-                status="error",
-                message="Please provide a valid email address",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
+            email: Union[str, None] = request.data.get("email")
+            if not email:
+                return service_response(
+                    status="error",
+                    message="Please provide an email address",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
 
-        otp: Union[str, None] = send_reset_otp(email)
-        if otp:
-            key = f'Reset_Token:{otp}'
-            user.reset_token = otp
-            user.save()
-            cache.set(key, otp, 60 * 10)
-            return service_response(
-                status="success",
-                message=(f"Reset OTP has been sent to your email {email}"),
-                status_code=status.HTTP_200_OK,
-            )
-        else:
-            return service_response(
-                status="error",
-                message="Failed to send reset OTP",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return service_response(
+                    status="error",
+                    message="Please provide a valid email address",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            otp: Union[str, None] = send_reset_otp(email)
+            if otp:
+                key = f"Reset_Token:{otp}"
+                user.reset_token = otp
+                user.save()
+                cache.set(key, otp, 60 * 10)
+                return service_response(
+                    status="success",
+                    message=(f"Reset OTP has been sent to your email {email}"),
+                    status_code=status.HTTP_200_OK,
+                )
+            else:
+                return service_response(
+                    status="error",
+                    message="Failed to send reset OTP",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except Exception:
+            return handle_internal_server_exception()
 
 
 class ChangePasswordView(APIView):
     """
     Updates a user password
     """
+
     serializer_class = ChangePasswordSerializer
 
     def post(self, request):
         """
         POST request handler for updating user password
         """
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            token = serializer.validated_data.get("reset_token")
-            password = serializer.validated_data.get("password")
-            try:
-                user = User.objects.get(reset_token=token)
-                key = f'Reset_Token:{token}'
-                if cache.get(key):
-                    user.set_password(password)
-                    user.reset_token = None
-                    user.save()
+        try:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                token = serializer.validated_data.get("reset_token")
+                password = serializer.validated_data.get("password")
+                try:
+                    user = User.objects.get(reset_token=token)
+                    key = f"Reset_Token:{token}"
+                    if cache.get(key):
+                        user.set_password(password)
+                        user.reset_token = None
+                        user.save()
+                        return service_response(
+                            status="sucess",
+                            message="Password sucessfully updated",
+                            status_code=status.HTTP_200_OK,
+                        )
                     return service_response(
-                        status="sucess",
-                        message="Password sucessfully updated",
-                        status_code=status.HTTP_200_OK
+                        status="error",
+                        message="Invalid or expired RESET OTP",
+                        status_code=status.HTTP_400_BAD_REQUEST,
                     )
-                return service_response(
-                    status="error",
-                    message="Invalid or expired RESET OTP",
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                )
-            except User.DoesNotExist:
-                return service_response(
-                    status="error",
-                    message="Invalid or expired RESET OTP",
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                )
-        return service_response(
-            status="error",
-            message=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+                except User.DoesNotExist:
+                    return service_response(
+                        status="error",
+                        message="Invalid or expired RESET OTP",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+            return service_response(
+                status="error",
+                message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return handle_internal_server_exception()
 
 
 class UpdatePasswordView(APIView):
     """View for updating an authenticated user password"""
+
     serializer_class = UpdatePasswordSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """POST request handler"""
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            password = serializer.validated_data.get("password")
-            user = User.objects.get(email=request.user.email)
-            user.set_password(password)
-            user.save()
+        try:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                password = serializer.validated_data.get("password")
+                user = User.objects.get(email=request.user.email)
+                user.set_password(password)
+                user.save()
+                return service_response(
+                    status="sucess",
+                    message="Password sucessfully updated",
+                    status_code=status.HTTP_200_OK,
+                )
             return service_response(
-                status="sucess",
-                message="Password sucessfully updated",
-                status_code=status.HTTP_200_OK
+                status="error",
+                message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
-        return service_response(
-            status="error",
-            message=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class MonnifyCardChargeAPIView(APIView):
+    """Charge User with their card details through monnify"""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        """Charge user with card details"""
+
+        def is_americanexpress(card_number: str) -> bool:
+            """checks if card is american express type
+
+            Args:
+                card_number (str): card number
+
+            Returns:
+                bool: True or false
+            """
+            if card_number.startswith("37") or card_number.startswith("34"):
+                return True
+            return False
+
+        def is_luhns_valid(card_number: str) -> bool:
+            """Luhns Algorithm to validate card number
+
+            Args:
+                card_number (str): card number
+
+            Returns:
+                bool: True or false
+            """
+            try:
+                if not (16 <= len(card_number) <= 19):
+                    return False
+                # convert to digitis
+                digits = list(map(int, card_number[::-1]))
+                total_sum = 0
+                for i, digit in enumerate(digits):
+                    if i % 2 == 1:
+                        digit *= 2
+                        if digit > 9:
+                            digit -= 9
+                    total_sum += digit
+                return total_sum % 10 == 0
+
+            except Exception as e:
+                logger.error(f"{e}")
+                traceback.print_exc()
+                return False
+
+        try:
+            card_number = request.data.get("card_number")
+            expiry_month = request.data.get("expiry_month")
+            expiry_year = request.data.get("expiry_year")
+            pin = request.data.get("pin")
+            cvv = request.data.get("cvv")
+            user = request.user
+            amount = request.data.get("amount")
+            card_date = datetime(int(expiry_year), int(expiry_month), 1)
+            today = datetime.now()
+            # bypass validation for dev mode
+            if machine != "local":
+                if card_date < today:
+                    return service_response(
+                        status="error", message="Card has Expired", status_code=400
+                    )
+                is_express = is_americanexpress(card_number)
+                is_luhn_valid = is_luhns_valid(card_number)
+                if is_express:
+                    if len(cvv) != 4:
+                        return service_response(
+                            status="error", message="Invalid CVV", status_code=400
+                        )
+                else:
+                    if len(cvv) != 3:
+                        return service_response(
+                            status="error", message="Invalid CVV", status_code=400
+                        )
+                if not is_luhn_valid:
+                    return service_response(
+                        status="error", message="Invalid Card Number", status_code=400
+                    )
+                # monnify card charge
+            if amount:
+                response = requests.post(
+                    auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
+                )
+                token = response.json()["responseBody"]["accessToken"]
+
+                referrence_id = str(uuid.uuid4())[:8]
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(token),
+                }
+                body = {
+                    "amount": float(amount),
+                    "customerName": f"{user.username}",
+                    "customerEmail": f"{user.email}",
+                    "paymentReference": f"{referrence_id}",
+                    "paymentDescription": f"Restaurant Go Wallet Funding by {user.username} at {datetime.now()}",
+                    "currencyCode": "NGN",
+                    "contractCode": f"{contract_code}",
+                    # "redirectUrl": f"{redirect_url}",
+                    "paymentMethods": ["CARD"],
+                }
+                data = json.dumps(body)
+                url = f"{base_url}/api/v1/merchant/transactions/init-transaction"
+                response = requests.post(url, headers=headers, data=data)
+                res = response.json()
+                print(res)
+                tran_ref = res["responseBody"]["transactionReference"]
+                init_tran_url = f"{base_url}/api/v1/merchant/cards/charge"
+                charge_body = {
+                    "transactionReference": tran_ref,
+                    "collectionChannel": "API_NOTIFICATION",
+                    "card": {
+                        "number": card_number,
+                        "expiryMonth": expiry_month,
+                        "expiryYear": expiry_year,
+                        "pin": pin,
+                        "cvv": cvv,
+                    },
+                }
+                charge_data = json.dumps(charge_body)
+                payment_response = requests.post(
+                    init_tran_url, data=charge_data, headers=headers
+                )
+                res = payment_response.json()
+                print(res)
+                req_success = res.get("requestSuccessful")
+                res_message = res.get("responseMessage")
+                if req_success and res_message == "success":
+                    res_body = res.get("responseBody")
+                    if res_body["status"] == "SUCCESS":
+                        response = {
+                            "status": "success",
+                            "message": "Card Charge Successful",
+                            "data": res_body,
+                        }
+                        return service_response(
+                            status="success",
+                            message="Card Charge Successful",
+                            data=res_body,
+                            status_code=200,
+                        )
+                return service_response(
+                    status="error", message="Card Charge Failed", status_code=400
+                )
+
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class MonnifyTransferAPIView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            print(user)
+            data = request.data
+            amount = data.get("amount")
+            if amount:
+                response = requests.post(
+                    auth_url, auth=HTTPBasicAuth(f"{api_key}", f"{secret_key}")
+                )
+                print(api_key, secret_key)
+                print(response.json())
+                token = response.json()["responseBody"]["accessToken"]
+                referrence_id = str(uuid.uuid4())[:8]
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(token),
+                }
+                body = {
+                    "amount": float(amount),
+                    "customerName": f"{user.username}",
+                    "customerEmail": f"{user.email}",
+                    "paymentReference": f"{referrence_id}",
+                    "paymentDescription": f"Restaurant Go Wallet Funding by {user.username} at {datetime.now()}",
+                    "currencyCode": "NGN",
+                    "contractCode": f"{contract_code}",
+                    # "redirectUrl": f"{redirect_url}",
+                    "paymentMethods": ["ACCOUNT_TRANSFER"],
+                }
+                data = json.dumps(body)
+                url = f"{base_url}/api/v1/merchant/transactions/init-transaction"
+                response = requests.post(url, headers=headers, data=data)
+                res = response.json()
+                print(res)
+                # checkout_url = res["responseBody"]["checkoutUrl"]
+                tran_ref = res["responseBody"]["transactionReference"]
+                init_tran_url = f"{base_url}/api/v1/merchant/bank-transfer/init-payment"
+                print(init_tran_url)
+                body = {"transactionReference": f"{tran_ref}", "bankCode": "035"}
+                init_data = json.dumps(body)
+                payment_response = requests.post(
+                    init_tran_url, data=init_data, headers=headers
+                )
+                res = payment_response.json()
+                print(res)
+                res_body = res.get("responseBody")
+                expiry_time = res_body["expiresOn"]
+                amount = res_body["amount"]
+                # 0.5% charge fee
+                fee = round(float(amount) * 0.005)
+                acct_details = {
+                    "account_number": res_body["accountNumber"],
+                    "account_name": res_body["accountName"],
+                    "bank_name": res_body["bankName"],
+                    "bank_code": res_body["bankCode"],
+                    "charges_fee": fee,
+                    "expiry_time": expiry_time,
+                    "ussd": res_body["ussdPayment"],
+                    "tran_ref": res_body["transactionReference"],
+                    "amount": amount,
+                }
+                return service_response(
+                    status="success",
+                    message="Account details generated successfully",
+                    data=acct_details,
+                    status_code=200,
+                )
+            else:
+                return service_response(
+                    status="error", message="Amount is required", status_code=400
+                )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class MonnifyPaymentWebhook(APIView):
+    """Monnify webhook controller for payment notifications"""
+
+    def post(self, request, *args, **kwargs):
+        """Post endpoint for the monnify webhook"""
+        try:
+            # get thr payload
+            data = request.body
+            dat = json.loads(data)
+            monnify_hashkey = request.META["HTTP_MONNIFY_SIGNATURE"]
+            forwarded_for = "{}".format(request.META.get("REMOTE_ADDR"))
+            monnify_secret = os.getenv("MONNIFY_SECRET_KEY_RG")
+            monnify_api_key = os.getenv("MONNIFY_API_KEY_RG")
+            monnify_base_url = os.getenv("MONNIFY_BASE_URL_RG")
+            if machine == "local":
+                ip = "127.0.0.1"
+            else:
+                ip = "35.242.133.146"
+            secret = bytes(monnify_secret, "utf-8")
+            hashkey = hmac.new(secret, request.body, hashlib.sha512).hexdigest()
+            if hashkey == monnify_hashkey and forwarded_for == ip:
+                res = requests.post(
+                    f"{monnify_base_url}/api/v1/auth/login",
+                    auth=HTTPBasicAuth(f"{monnify_api_key}", f"{monnify_secret}"),
+                )
+                data = json.loads(res.text)
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(
+                        data["responseBody"]["accessToken"]
+                    ),
+                }
+                response = requests.get(
+                    "{}/api/v2/transactions/{}".format(
+                        monnify_base_url,
+                        urllib.parse.quote(dat["eventData"]["transactionReference"]),
+                    ),
+                    headers=headers,
+                )
+
+                resp = json.loads(response.text)
+
+                if (
+                    response.status_code == 200 and resp["requestSuccessful"] == True
+                ) and (
+                    resp["responseMessage"] == "success"
+                    and resp["responseBody"]["paymentStatus"] == "PAID"
+                ):
+                    user_email = dat["eventData"]["customer"]["email"]
+                    user = User.objects.get(email__iexact=user_email)
+                    amount = float(resp["responseBody"]["amountPaid"])
+                    our_fee = round(float(amount) * 0.005)
+
+                    paynow = float(amount) - float(our_fee)
+
+                    ref = resp["responseBody"]["transactionReference"]
+
+                    if not Funding.objects.filter(ref=ref).exists():
+                        try:
+                            user.deposit(
+                                user.id,
+                                paynow,
+                                "Wallet Funding",
+                                ref,
+                            )
+                            Funding.objects.create(
+                                user=user,
+                                ref=ref,
+                                amount=paynow,
+                                status="Successful",
+                                gateway="monnify",
+                            )
+                            return HttpResponse(status=200)
+                        except Exception as e:
+                            logger.error(f"{e}")
+                            traceback.print_exc()
+                            return HttpResponse(status=500)
+
+                    else:
+                        pass
+
+                else:
+                    return HttpResponse(status=400)
+
+            else:
+                return HttpResponseForbidden("Permission denied.")
+
+        except Exception as e:
+            logger.error(f"{e}")
+            traceback.print_exc()
+            return HttpResponse(status=500)
+
+
 # TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
