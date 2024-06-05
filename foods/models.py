@@ -29,7 +29,7 @@ class FoodAsset(models.Model):
     name = models.CharField(max_length=100)
     food_package = models.ForeignKey(FoodPackage, on_delete=models.CASCADE)
     image = models.ImageField(
-        upload_to="food_images", null=True, blank=True, related_name="items"
+        upload_to="food_images", null=True, blank=True, related_name="assets"
     )
     alt = models.CharField(max_length=30, null=True, blank=True)
 
