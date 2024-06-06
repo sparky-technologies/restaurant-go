@@ -126,3 +126,9 @@ class UpdatePasswordSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("password", )
+
+
+class UserUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("first_name", "last_name", "phone_number", "profile_pic")
