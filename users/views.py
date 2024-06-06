@@ -32,8 +32,8 @@ import hashlib
 import urllib.parse
 from dotenv import load_dotenv
 from rest_framework import viewsets
-from django.core.serializers import serialize
 from utils.serializers import serialize_model
+from rest_framework.exceptions import MethodNotAllowed
 
 load_dotenv()
 
@@ -708,7 +708,6 @@ class UserViewSet(viewsets.ModelViewSet):
     API endpoint that allows users to be viewed or edited.
     """
 
-    permission_classes = (IsAuthenticated,)
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
 
@@ -808,3 +807,24 @@ class UserViewSet(viewsets.ModelViewSet):
         except Exception:
             return handle_internal_server_exception()
 
+    def destroy(self, request, pk=None):
+        raise MethodNotAllowed(request.method)
+
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        secure_actions = ["update", "retrieve"]
+        if self.action in secure_actions:
+            return [IsAuthenticated()]
+        else:
+            return []
