@@ -1,9 +1,10 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
     CreateUserAPIView,
     MonnifyCardChargeAPIView,
     MonnifyPaymentWebhook,
     MonnifyTransferAPIView,
+    UserViewSet,
     VerifyOTP,
     ResendOTP,
     UserLoginAPIView,
@@ -18,6 +19,11 @@ from rest_framework_simplejwt.views import (
 )
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+
+router.register(r"users", UserViewSet, basename="users")
 
 decorated_refresh = swagger_auto_schema(
     method="post",
@@ -104,4 +110,5 @@ urlpatterns = [
     path("funding/card", MonnifyCardChargeAPIView.as_view(), name="funding-card"),
     path("funding/transfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
     path("funding/webhook", MonnifyPaymentWebhook.as_view(), name="funding-webhook"),
+    path("", include(router.urls)),
 ]

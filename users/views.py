@@ -31,6 +31,9 @@ import uuid
 import hashlib
 import urllib.parse
 from dotenv import load_dotenv
+from rest_framework import viewsets
+from utils.serializers import serialize_model
+from rest_framework.exceptions import MethodNotAllowed
 
 load_dotenv()
 
@@ -700,4 +703,128 @@ class MonnifyPaymentWebhook(APIView):
             return HttpResponse(status=500)
 
 
-# TODO: implement get userinfo view can use viewsets to immplement retrieve and update in one viewset
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+
+    queryset = User.objects.all().order_by("-date_joined")
+    serializer_class = UserSerializer
+
+    def update(self, request, pk=None):
+        """Updates a user"""
+        try:
+            data = request.data
+            user = User.objects.get(pk=pk)
+            user_id = user.id
+            fields_to_update = [
+                "first_name",
+                "last_name",
+                "phone_number",
+                "profile_pic",
+            ]
+            for field, value in data.items():
+                if field not in fields_to_update:
+                    return service_response(
+                        status="error",
+                        message=f"You are not allowed to change {field} field",
+                        status_code=404,
+                    )
+                setattr(user, field, value)
+
+            # Save the user
+            user.save()
+            # cache the updata user
+            keys_to_remove = ["password", "groups", "user_permissions"]
+            user_full_name = user.full_name
+            data = serialize_model(user, keys_to_remove)
+            data["user_id"] = user_id
+            data["full_name"] = user_full_name
+            cache.set(f"user:{user_id}", data, 60 * 60 * 12)  # expires in 12 hours
+            return service_response(
+                status="success", message="User updated successfully", status_code=200
+            )
+        except User.DoesNotExist:
+            return service_response(
+                status="error", message="User Not Found!", status_code=404
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+    def retrieve(self, request, pk=None):
+        """Retrieves a user
+
+        Args:
+            request (dict): HTTP Request object
+            pk (int, optional): model primary key. Defaults to None.
+        """
+        try:
+            request_user = request.user
+            # get user from cache
+            print(f"This is {pk}")
+            user = cache.get(f"user:{pk}")
+            if user:
+                print("Fetch from cache")
+                if request_user.id != user.get("user_id"):
+                    return service_response(
+                        status="error",
+                        message="You are not allowed to access this user",
+                        status_code=403,
+                    )
+                return service_response(
+                    status="success",
+                    message="User retrieved successfully",
+                    data=user,
+                    status_code=200,
+                )
+            else:
+                user = User.objects.get(pk=pk)
+                user_id = user.id
+                print("Fetch From db")
+                if request_user.id != user.id:
+                    return service_response(
+                        status="error",
+                        message="You are not allowed to access this user",
+                        status_code=403,
+                    )
+                user_full_name = user.full_name
+                keys_to_remove = ["password", "groups", "user_permissions"]
+                data = serialize_model(user, keys_to_remove)
+                print(pk)
+                data["user_id"] = user_id
+                data["full_name"] = user_full_name
+                cache.set(f"user:{user_id}", data, 60 * 60 * 12)  # expires in 12 hours
+                return service_response(
+                    status="success",
+                    message="User retrieved successfully",
+                    data=data,
+                    status_code=200,
+                )
+        except User.DoesNotExist:
+            return service_response(
+                status="error", message="User Not Found!", status_code=404
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+    def destroy(self, request, pk=None):
+        raise MethodNotAllowed(request.method)
+
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        secure_actions = ["update", "retrieve"]
+        if self.action in secure_actions:
+            return [IsAuthenticated()]
+        else:
+            return []
