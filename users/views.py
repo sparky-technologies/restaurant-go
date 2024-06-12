@@ -17,6 +17,8 @@ from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from .swagger_serializer import ResponseSerializer
 from .models import User, Funding
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
@@ -828,3 +830,68 @@ class UserViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]
         else:
             return []
+
+
+class WalletView(APIView):
+    """View to get the user wallet balance"""
+
+    @swagger_auto_schema(
+        operation_description="Get the user wallet balance",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Wallet balance retrieved",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "success",
+                        "message": "Wallet balance retrieved",
+                        "data": {
+                            "wallet_balance": 0
+                        }
+                    }
+                }
+            ),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response(
+                description="User not authenticated",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "User not authenticated",
+                        "data": {}
+                    }
+                }
+            ),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+                description="Internal server error",
+                schema=ResponseSerializer(),
+                examples={
+                    "application/json": {
+                        "status": "error",
+                        "message": "Internal server error",
+                        "data": {}
+                    }
+                }
+            )
+        }
+    )
+    def get(self, request, *args, **kwargs) -> Response:
+        """Get the user wallet balance"""
+
+        try:
+            if not request.user.is_authenticated:
+                return service_response(
+                    status="error",
+                    message="User not authenticated",
+                    status_code=401,
+                )
+            user = request.user
+            wallet_balance = user.wallet_balance
+            return service_response(
+                status="success",
+                message="Wallet balance retrieved",
+                data={"wallet_balance": wallet_balance},
+                status_code=200,
+            )
+        except Exception:
+            return handle_internal_server_exception()
