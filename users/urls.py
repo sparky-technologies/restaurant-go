@@ -13,6 +13,7 @@ from .views import (
     ChangePasswordView,
     UpdatePasswordView,
     status,
+    WalletView
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -111,4 +112,6 @@ urlpatterns = [
     path("funding/transfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
     path("funding/webhook", MonnifyPaymentWebhook.as_view(), name="funding-webhook"),
     path("", include(router.urls)),
+    path("wallet", WalletView.as_view(), name="wallet")
+
 ]
