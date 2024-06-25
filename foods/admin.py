@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from foods.models import FoodAsset, FoodItem, FoodPackage, FoodCategory, Food
+from foods.models import AssetFood, FoodAsset, FoodItem, FoodPackage, FoodCategory, Food
 
 # Register your models here.
 
@@ -15,6 +15,11 @@ class FoodItemStackedAdmin(admin.StackedInline):
     extra = 1
 
 
+class AssetFoodAdmin(admin.StackedInline):
+    model = AssetFood
+    extra = 1
+
+
 class FoodPackageAdmin(admin.ModelAdmin):
     inlines = [FoodAssetAdmin, FoodItemStackedAdmin]
     list_display = ["name", "category", "price", "available_quantity", "total_purchase"]
@@ -25,6 +30,7 @@ class FoodPackageAdmin(admin.ModelAdmin):
 
 
 class FoodAdmin(admin.ModelAdmin):
+    inlines = [AssetFoodAdmin]
     list_display = ["name", "category", "price", "available_quantity", "total_purchase"]
     list_filter = ["category"]
     search_fields = [

@@ -68,8 +68,8 @@ class FoodAsset(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = "Food Asset"
-        verbose_name_plural = "Food Assets"
+        verbose_name = "Food Package Asset"
+        verbose_name_plural = "Food Package Assets"
 
 
 class FoodItem(models.Model):
@@ -123,3 +123,21 @@ class Food(models.Model):
         """This is a util method to increase the the total purchase"""
         self.total_purchase += 1
         self.save()
+
+
+class AssetFood(models.Model):
+    name = models.CharField(max_length=100)
+    food = models.ForeignKey(Food, on_delete=models.CASCADE, related_name="assets")
+    image = models.ImageField(
+        upload_to="food_images",
+        null=True,
+        blank=True,
+    )
+    alt = models.CharField(max_length=30, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Food Asset"
+        verbose_name_plural = "Food Assets"

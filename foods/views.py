@@ -3,8 +3,8 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
 from django.db.models import Prefetch
-from foods.models import FoodAsset, FoodCategory, FoodItem, FoodPackage
-from foods.serializers import FoodPackageSerializer
+from foods.models import AssetFood, Food, FoodAsset, FoodCategory, FoodItem, FoodPackage
+from foods.serializers import FoodPackageSerializer, FoodSerializer
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from rest_framework.exceptions import MethodNotAllowed
@@ -79,7 +79,7 @@ class FoodPackageViewSet(viewsets.ModelViewSet):
 class FoodCategoryAPIView(APIView):
     """API endpoint to list all available food categories"""
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs) -> Response:
         """http get handler that returns all available food categories"""
         try:
             food_categories: List[FoodCategory] = FoodCategory.objects.all().values()
@@ -88,4 +88,33 @@ class FoodCategoryAPIView(APIView):
                 status="success", data=data, message="Fetch Successful", status_code=200
             )
         except:
+            return handle_internal_server_exception()
+
+
+class FoodViewSet(viewsets.ModelViewSet):
+    """Food API View set"""
+
+    queryset = Food.objects.all()
+    serializer_class = FoodSerializer
+
+    def list(self, request, *args, **kwargs) -> Response:
+        """List all available foods"""
+        try:
+            category = request.query_params.get("category", None)
+            assets_fields: List[str] = ["name", "image", "alt"]
+            if category:
+                cat_id = int(category)
+                foods: List[Food] = Food.objects.prefetch_related(
+                    Prefetch("assets", queryset=AssetFood.objects.only(*assets_fields)),
+                ).filter(category=cat_id)
+            else:
+                foods: List[Food] = Food.objects.prefetch_related(
+                    Prefetch("assets", queryset=AssetFood.objects.only(*assets_fields)),
+                ).all()
+            serializer: FoodSerializer = FoodSerializer(foods, many=True)
+            data = serializer.data
+            return service_response(
+                status="success", data=data, message="Fetch Successful", status_code=200
+            )
+        except Exception:
             return handle_internal_server_exception()
