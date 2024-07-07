@@ -53,9 +53,3 @@ class OrderItem(models.Model):
                 FoodPackage.objects.get(id=self.food_item_id).price
             )
         return 0
-
-    def increase_quantity(self):
-        self.quantity += 1
-        self.save()
-
-        return self.quantity

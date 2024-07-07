@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from foods.models import Food, FoodPackage
+from orders.serializers import TrayItemSerializer
 from users.models import Tray, TrayItem
 from utils.response import service_response
 from utils.exceptions import handle_internal_server_exception
@@ -24,7 +25,8 @@ class AddItemToTrayAPIView(APIView):
 
             # get the food from the request payload
             food_type = data.get("type")
-            if food_type != "Meal" or food_type != "Package":
+            print(food_type)
+            if food_type != "Meal" and food_type != "Package":
                 return service_response(
                     status="error",
                     data=None,
@@ -32,7 +34,7 @@ class AddItemToTrayAPIView(APIView):
                     status_code=400,
                 )
 
-            food_item_id = int(data.get("item"))
+            food_item_id = int(data.get("item_id"))
 
             if food_type == "Meal":
                 # get the food item
@@ -43,7 +45,7 @@ class AddItemToTrayAPIView(APIView):
 
             quantity = data.get("quantity", 1)
             # get the user tray
-            tray = Tray.objects.get_or_create(user=user)
+            tray, created = Tray.objects.get_or_create(user=user)
             # create a new tray item
             TrayItem.objects.create(
                 tray=tray,
@@ -87,7 +89,7 @@ class UpdateTrayItemQuantityAPIView(APIView):
     def post(self, request, *args, **kwargs):
         """Update quantity post handler"""
         try:
-            item_id = request.data.get("id")
+            item_id = kwargs.get("item_id")
             # get the TrayItem
             tray_item = TrayItem.objects.get(id=item_id)
 
@@ -109,6 +111,37 @@ class UpdateTrayItemQuantityAPIView(APIView):
                 status="error",
                 data=None,
                 message="This Tray Item Does Not Exist",
+                status_code=404,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class TrayItemListAPIView(APIView):
+    """List all items in the Tray"""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = TrayItemSerializer
+
+    def get(self, request, *args, **kwargs):
+        """list all items in the tray"""
+        try:
+            user = request.user
+            # get tray
+            tray = Tray.objects.get(user=user)
+            # serialize the tray items
+            serializer = self.serializer_class(tray.items, many=True)
+            return service_response(
+                status="success",
+                data=serializer.data,
+                message="Tray Items Fetch Successfully",
+                status_code=200,
+            )
+        except Tray.DoesNotExist:
+            return service_response(
+                status="error",
+                data=None,
+                message="This User Has No Tray",
                 status_code=404,
             )
         except Exception:

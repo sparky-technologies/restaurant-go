@@ -323,10 +323,11 @@ class Tray(models.Model):
         return random_string
 
     def save(self, *args, **kwargs):
-        self.name = self.generate_random_string()
+        self.name = f"{self.user.username}RGO{self.generate_random_string()}"
         super().save(*args, **kwargs)
 
 
+# TODO: enhance this model by removing the str_meta and customize nice __str__ and Meta for admin
 @str_meta
 class TrayItem(models.Model):
     tray = models.ForeignKey(Tray, on_delete=models.CASCADE, related_name="items")
@@ -344,6 +345,12 @@ class TrayItem(models.Model):
                 FoodPackage.objects.get(id=self.food_item_id).price
             )
         return 0
+
+    def increase_quantity(self):
+        self.quantity += 1
+        self.save()
+
+        return self.quantity
 
 
 class DeliveryAddress(models.Model):
