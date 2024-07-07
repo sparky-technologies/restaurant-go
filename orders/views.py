@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from foods.models import Food, FoodPackage
-from orders.serializers import UpdateTrayItemQuantitySerializer
 from users.models import Tray, TrayItem
 from utils.response import service_response
 from utils.exceptions import handle_internal_server_exception
