@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     # django apps
     "users",
     "foods",
+    "orders",
 ]
 
 MIDDLEWARE = [
