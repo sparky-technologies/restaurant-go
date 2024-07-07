@@ -322,9 +322,9 @@ class Tray(models.Model):
         random_string = "".join(random.choices(characters, k=6))
         return random_string
 
-    def save(self):
+    def save(self, *args, **kwargs):
         self.name = self.generate_random_string()
-        super().save()
+        super().save(*args, **kwargs)
 
 
 @str_meta
