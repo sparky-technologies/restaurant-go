@@ -23,6 +23,7 @@ class Order(models.Model):
     payment_type = models.CharField(
         max_length=30, choices=payment_type, default="OnDelivery"
     )
+    delivery_address = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 

@@ -23,3 +23,8 @@ payment_type = (
     ("Instant", "Instant"),
     ("OnDelivery", "OnDelivery"),
 )
+
+
+state_choices = (("Lagos", "Lagos"),)
+
+city_choices = (("Island", "Island"),)

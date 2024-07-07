@@ -13,7 +13,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 from django.utils import timezone
 import random
 import string
-from constants.constant import food_types
+from constants.constant import food_types, state_choices, city_choices
 from foods.models import FoodItem, FoodPackage
 from utils.decorators import str_meta
 
@@ -340,3 +340,20 @@ class TrayItem(models.Model):
         elif self.food_item_type == "Package":
             return self.quantity * FoodPackage.objects.get(id=self.food_item_id).price
         return 0
+
+
+class DeliveryAddress(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="delivery_addresses"
+    )
+    state = models.CharField(max_length=30, choices=state_choices, default="Lagos")
+    city = models.CharField(max_length=30, choices=city_choices, default="Island")
+    address = models.TextField()
+
+    def __str__(self):
+        return f"{self.user.username} - {self.state}, {self.city}"
+
+    class Meta:
+        verbose_name_plural = "Delivery Addresses"
+        verbose_name = "Delivery Address"
+        db_table = "delivery_addresses"
