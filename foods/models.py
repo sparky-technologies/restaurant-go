@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from utils.decorators import str_meta
+from constants.constant import food_types
 
 
 # Create your models here.
@@ -29,6 +30,7 @@ class FoodPackage(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     available_quantity = models.IntegerField(default=0)
+    food_type = models.CharField(max_length=50, choices=food_types, default="Package")
     total_purchase = models.BigIntegerField(default=0)
     date_created = models.DateTimeField(default=timezone.now)
     date_updated = models.DateTimeField(default=timezone.now)
@@ -109,6 +111,7 @@ class Food(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     available_quantity = models.IntegerField(default=0)
+    food_type = models.CharField(max_length=50, choices=food_types, default="Meal")
     total_purchase = models.BigIntegerField(default=0)
     date_created = models.DateTimeField(default=timezone.now)
     date_updated = models.DateTimeField(default=timezone.now)
