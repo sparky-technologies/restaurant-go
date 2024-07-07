@@ -130,7 +130,7 @@ class TrayItemListAPIView(APIView):
             # get tray
             tray = Tray.objects.get(user=user)
             # serialize the tray items
-            serializer = self.serializer_class(tray.items, many=True)
+            serializer = self.serializer_class(tray.items, context={"request": request}, many=True)
             return service_response(
                 status="success",
                 data=serializer.data,

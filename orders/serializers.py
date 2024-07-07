@@ -36,7 +36,13 @@ class TrayItemSerializer(serializers.ModelSerializer):
         else:
             food = None
 
+        item_id = instance.id
+        request = self.context.get("request")
+        base_url = request.build_absolute_uri("/")[:-1]
+        update_url = f"{base_url}/{item_id}/quantity/update"
+
         ret["food"] = food
+        ret["quantity_update_url"] = update_url
 
         ret.pop("food_item_type", None)
         ret.pop("food_item_id", None)
