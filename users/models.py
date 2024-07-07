@@ -334,11 +334,15 @@ class TrayItem(models.Model):
     food_item_type = models.CharField(max_length=50, choices=food_types, default="Meal")
     quantity = models.IntegerField(default=1)
 
-    def subtotal(self) -> int:
+    def subtotal(self) -> float:
         if self.food_item_type == "Meal":
-            return self.quantity * FoodItem.objects.get(id=self.food_item_id).price
+            return float(self.quantity) * float(
+                FoodItem.objects.get(id=self.food_item_id).price
+            )
         elif self.food_item_type == "Package":
-            return self.quantity * FoodPackage.objects.get(id=self.food_item_id).price
+            return float(self.quantity) * float(
+                FoodPackage.objects.get(id=self.food_item_id).price
+            )
         return 0
 
 
