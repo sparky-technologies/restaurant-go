@@ -17,7 +17,7 @@ from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
-from .models import User, Funding
+from .models import Tray, User, Funding
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 from rest_framework import status
@@ -75,7 +75,7 @@ class CreateUserAPIView(APIView):
                 email: Union[str, None] = serializer.validated_data.get("email")
                 username: Union[str, None] = serializer.validated_data.get("username")
                 # save the user
-                serializer.save()
+                user = serializer.save()
                 # send the otp to the email
                 otp: Union[str, None] = send_otp(email, username)
                 if otp is None:
@@ -86,6 +86,8 @@ class CreateUserAPIView(APIView):
                     )
                 # cache the otp
                 cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
+                # create a Tray object for the user
+                Tray.objects.create(user=user)
                 return service_response(
                     status="success",
                     message=_(
@@ -199,9 +201,11 @@ class UserLoginAPIView(APIView):
                     "refresh_token": refresh_token,
                     "expires_in": tokens.access_token.lifetime.total_seconds(),  # Expiry time in seconds
                 }
+
                 now: datetime = datetime.now()
                 user.last_login = now
                 user.save()
+                # TODO Implement RabbitMQ queue to another email service to send new login email to user
                 return service_response(
                     status="success",
                     message="Login Successful",
