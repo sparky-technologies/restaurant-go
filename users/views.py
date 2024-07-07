@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from utils.utils import send_otp, send_reset_otp
 from .serializers import (
+    AddressSerializer,
     LoginSerializer,
     UserSerializer,
     ChangePasswordSerializer,
@@ -17,7 +18,7 @@ from django.core.cache import cache
 from utils.exceptions import handle_internal_server_exception
 from utils.response import service_response
 from drf_yasg.utils import swagger_auto_schema
-from .models import Tray, User, Funding
+from .models import DeliveryAddress, Tray, User, Funding
 from drf_yasg import openapi
 from .swagger_serializer import ResponseSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -849,11 +850,9 @@ class WalletView(APIView):
                     "application/json": {
                         "status": "success",
                         "message": "Wallet balance retrieved",
-                        "data": {
-                            "wallet_balance": 0
-                        }
+                        "data": {"wallet_balance": 0},
                     }
-                }
+                },
             ),
             status.HTTP_401_UNAUTHORIZED: openapi.Response(
                 description="User not authenticated",
@@ -862,9 +861,9 @@ class WalletView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "User not authenticated",
-                        "data": {}
+                        "data": {},
                     }
-                }
+                },
             ),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
                 description="Internal server error",
@@ -873,11 +872,11 @@ class WalletView(APIView):
                     "application/json": {
                         "status": "error",
                         "message": "Internal server error",
-                        "data": {}
+                        "data": {},
                     }
-                }
-            )
-        }
+                },
+            ),
+        },
     )
     def get(self, request, *args, **kwargs) -> Response:
         """Get the user wallet balance"""
@@ -899,3 +898,52 @@ class WalletView(APIView):
             )
         except Exception:
             return handle_internal_server_exception()
+
+
+""" Address add constraints
+1. User should be authenticated
+2. State should only be Lagos
+3. Should only be Island
+Cause thats were we will be running for now
+if user send a request with state not lagos, should get grace error
+if user not in island should get grace error
+
+"""
+
+
+class AddressViewSet(viewsets.ModelViewSet):
+    """Address management viewset"""
+
+    queryset = DeliveryAddress.objects.all()
+    serializer_class = AddressSerializer
+    permission_class = [IsAuthenticated]
+
+    # TODO: enhance the add address endpoint in such that user can't add more than three addresses
+    def create(self, request, *args, **kwargs):
+        """Create new user address"""
+        try:
+            serializer = self.serializer_class(
+                data=request.data, context={"request": request}
+            )
+            if serializer.is_valid():
+                serializer.save()
+                return service_response(
+                    status="success",
+                    message="Address created successfully",
+                    data=serializer.data,
+                    status_code=201,
+                )
+            error_message = serializer.errors["message"][0]
+            return service_response(
+                status="error",
+                message=error_message,
+                data=None,
+                status_code=400,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+    # TODO: implement the patch endpoint for user to only update their existing addresses, just the address field
+
+    # TODO: implement delete address for user to delete any of their address
+    # TODO: implement get users addresses
