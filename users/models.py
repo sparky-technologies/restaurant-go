@@ -11,6 +11,11 @@ import traceback
 from django.db import transaction
 from phonenumber_field.modelfields import PhoneNumberField
 from django.utils import timezone
+import random
+import string
+from constants.constant import food_types, state_choices, city_choices
+from foods.models import FoodItem, FoodPackage
+from utils.decorators import str_meta
 
 logger = logging.getLogger(__name__)
 
@@ -296,3 +301,70 @@ class WalletSummary(models.Model):
     class Meta:
         verbose_name_plural = "Wallet Summary"
         verbose_name = "Wallet Summary"
+
+
+# Tray model another word for Cart in terms of Restaurant
+@str_meta
+class Tray(models.Model):
+    name = models.CharField(max_length=100, unique=True, blank=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tray",
+        blank=False,
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    def generate_random_string(self) -> str:
+        """utils function to generate a random string"""
+        characters = string.ascii_letters + string.digits
+        random_string = "".join(random.choices(characters, k=6))
+        return random_string
+
+    def save(self, *args, **kwargs):
+        self.name = f"{self.user.username}RGO{self.generate_random_string()}"
+        super().save(*args, **kwargs)
+
+
+# TODO: enhance this model by removing the str_meta and customize nice __str__ and Meta for admin
+@str_meta
+class TrayItem(models.Model):
+    tray = models.ForeignKey(Tray, on_delete=models.CASCADE, related_name="items")
+    food_item_id = models.IntegerField()
+    food_item_type = models.CharField(max_length=50, choices=food_types, default="Meal")
+    quantity = models.IntegerField(default=1)
+
+    def subtotal(self) -> float:
+        if self.food_item_type == "Meal":
+            return float(self.quantity) * float(
+                FoodItem.objects.get(id=self.food_item_id).price
+            )
+        elif self.food_item_type == "Package":
+            return float(self.quantity) * float(
+                FoodPackage.objects.get(id=self.food_item_id).price
+            )
+        return 0
+
+    def increase_quantity(self):
+        self.quantity += 1
+        self.save()
+
+        return self.quantity
+
+
+class DeliveryAddress(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="delivery_addresses"
+    )
+    state = models.CharField(max_length=30, choices=state_choices, default="Lagos")
+    city = models.CharField(max_length=30, choices=city_choices, default="Island")
+    address = models.TextField()
+
+    def __str__(self):
+        return f"{self.user.username} - {self.state}, {self.city}"
+
+    class Meta:
+        verbose_name_plural = "Delivery Addresses"
+        verbose_name = "Delivery Address"
+        db_table = "delivery_addresses"

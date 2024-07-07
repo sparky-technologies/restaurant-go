@@ -39,6 +39,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("users.urls")),
     path("api/v1/", include("foods.urls")),
+    path("api/v1/", include("orders.urls")),
     path("", RootPage.as_view(), name="root"),
     path(
         "docs/",

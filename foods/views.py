@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 # Create your views here.
 
 
+# noinspection PyUnresolvedReferences
 class FoodPackageViewSet(viewsets.ModelViewSet):
     """Food Package REST Viewset"""
 
