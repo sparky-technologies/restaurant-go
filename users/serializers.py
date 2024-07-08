@@ -4,6 +4,8 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 
+from users.models import DeliveryAddress
+
 
 User = get_user_model()
 
@@ -116,6 +118,7 @@ class LoginSerializer(ModelSerializer):
 
 class ChangePasswordSerializer(ModelSerializer):
     """Serializer for changing a user password"""
+
     class Meta:
         model = User
         fields = ("password", "reset_token")
@@ -123,12 +126,34 @@ class ChangePasswordSerializer(ModelSerializer):
 
 class UpdatePasswordSerializer(ModelSerializer):
     """Serializer for updating a user password"""
+
     class Meta:
         model = User
-        fields = ("password", )
+        fields = ("password",)
 
 
 class UserUpdateSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("first_name", "last_name", "phone_number", "profile_pic")
+
+
+class AddressSerializer(ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = DeliveryAddress
+        fields = ("state", "city", "address", "user")
+
+    def validate(self, data):
+        """Validate user's inputed address on signup"""
+        message = {"message": ""}
+        state = data.get("state")
+        city = data.get("city")
+        if state.capitalize() != "Lagos":
+            message["message"] = "We're running in Lagos only for now"
+            raise serializers.ValidationError(message)
+        if city.capitalize() != "Island":
+            message["message"] = "We're running in Island only for now"
+            raise serializers.ValidationError("We're running in Island only for now")
+        return data

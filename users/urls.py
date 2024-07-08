@@ -1,5 +1,6 @@
 from django.urls import path, include
 from .views import (
+    AddressViewSet,
     CreateUserAPIView,
     MonnifyCardChargeAPIView,
     MonnifyPaymentWebhook,
@@ -13,7 +14,7 @@ from .views import (
     ChangePasswordView,
     UpdatePasswordView,
     status,
-    WalletView
+    WalletView,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -25,6 +26,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 
 router.register(r"users", UserViewSet, basename="users")
+router.register(r"users_address", AddressViewSet, basename="users-address")
 
 decorated_refresh = swagger_auto_schema(
     method="post",
@@ -112,6 +114,5 @@ urlpatterns = [
     path("funding/transfer", MonnifyTransferAPIView.as_view(), name="funding-tranfer"),
     path("funding/webhook", MonnifyPaymentWebhook.as_view(), name="funding-webhook"),
     path("", include(router.urls)),
-    path("wallet", WalletView.as_view(), name="wallet")
-
+    path("wallet", WalletView.as_view(), name="wallet"),
 ]

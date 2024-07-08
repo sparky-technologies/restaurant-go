@@ -357,8 +357,8 @@ class DeliveryAddress(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="delivery_addresses"
     )
-    state = models.CharField(max_length=30, choices=state_choices, default="Lagos")
-    city = models.CharField(max_length=30, choices=city_choices, default="Island")
+    state = models.CharField(max_length=30, default="Lagos")
+    city = models.CharField(max_length=30, default="Island")
     address = models.TextField()
 
     def __str__(self):
