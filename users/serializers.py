@@ -138,12 +138,13 @@ class UserUpdateSerializer(ModelSerializer):
         fields = ("first_name", "last_name", "phone_number", "profile_pic")
 
 
-class AddressSerializer(ModelSerializer):
+class AddressSerializer(serializers.HyperlinkedModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    self_url = serializers.SerializerMethodField()
 
     class Meta:
         model = DeliveryAddress
-        fields = ("state", "city", "address", "user")
+        fields = ("id", "state", "city", "address", "user", "self_url")
 
     def validate(self, data):
         """Validate user's inputed address on signup"""
@@ -157,3 +158,8 @@ class AddressSerializer(ModelSerializer):
             message["message"] = "We're running in Island only for now"
             raise serializers.ValidationError("We're running in Island only for now")
         return data
+
+    def get_self_url(self, obj):
+        request = self.context.get("request")
+        base_url = request.build_absolute_uri("/")[:-1]
+        return f"{base_url}/users_addresses/{obj.pk}/"

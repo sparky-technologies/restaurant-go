@@ -26,7 +26,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 
 router.register(r"users", UserViewSet, basename="users")
-router.register(r"users_address", AddressViewSet, basename="users-address")
+router.register(r"users_addresses", AddressViewSet, basename="users-address")
 
 decorated_refresh = swagger_auto_schema(
     method="post",

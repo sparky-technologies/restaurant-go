@@ -946,4 +946,34 @@ class AddressViewSet(viewsets.ModelViewSet):
     # TODO: implement the patch endpoint for user to only update their existing addresses, just the address field
 
     # TODO: implement delete address for user to delete any of their address
+    def destroy(self, request, *args, **kwargs):
+        """Delete user address"""
+        try:
+            address = self.get_object()
+            address.delete()
+            return service_response(
+                status="success",
+                message="Address deleted successfully",
+                data=None,
+                status_code=204,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
     # TODO: implement get users addresses
+    def list(self, request, *args, **kwargs):
+        """List all user addresses"""
+        try:
+            addresses = DeliveryAddress.objects.filter(user=request.user)
+            serializer = self.serializer_class(
+                addresses, many=True, context={"request": request}
+            )
+            data = serializer.data
+            return service_response(
+                status="success",
+                message="Addresses retrieved successfully",
+                data=data,
+                status_code=200,
+            )
+        except Exception:
+            return handle_internal_server_exception()
