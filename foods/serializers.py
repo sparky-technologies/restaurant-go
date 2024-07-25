@@ -41,7 +41,21 @@ class FoodPackageSerializer(serializers.ModelSerializer):
 
 class FoodSerializer(serializers.ModelSerializer):
     assets = AssetFoodSerializer(many=True)
+    groups_link = serializers.SerializerMethodField()
+    self_link = serializers.SerializerMethodField()
 
     class Meta:
         model = Food
         fields = "__all__"
+
+    def get_groups_link(self, obj):
+        request = self.context.get("request")
+        base_url = request.build_absolute_uri("/")[:-1]
+        url = f"{base_url}/foods"
+        return url
+
+    def get_self_link(self, obj):
+        request = self.context.get("request")
+        base_url = request.build_absolute_uri("/")[:-1]
+        url = f"{base_url}/foods/{obj.id}"
+        return url

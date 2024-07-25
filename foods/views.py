@@ -39,7 +39,9 @@ class FoodPackageViewSet(viewsets.ModelViewSet):
                     Prefetch("items", queryset=FoodItem.objects.only(*items_fields)),
                     Prefetch("assets", queryset=FoodAsset.objects.only(*assets_fields)),
                 ).all()
-            serializer: FoodPackageSerializer = FoodPackageSerializer(foods, many=True)
+            serializer: FoodPackageSerializer = FoodPackageSerializer(
+                foods, context={"request": request}, many=True
+            )
             data = serializer.data
             return service_response(
                 status="success", data=data, message="Fetch Successful", status_code=200
@@ -112,7 +114,9 @@ class FoodViewSet(viewsets.ModelViewSet):
                 foods: List[Food] = Food.objects.prefetch_related(
                     Prefetch("assets", queryset=AssetFood.objects.only(*assets_fields)),
                 ).all()
-            serializer: FoodSerializer = FoodSerializer(foods, many=True)
+            serializer: FoodSerializer = FoodSerializer(
+                foods, context={"request": request}, many=True
+            )
             data = serializer.data
             return service_response(
                 status="success", data=data, message="Fetch Successful", status_code=200
