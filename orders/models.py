@@ -3,8 +3,9 @@ from django.contrib.auth import get_user_model
 from constants.constant import order_status, payment_status, payment_type, food_types
 from django.utils import timezone
 from utils.decorators import str_meta
+from utils.utils import generate_ref
 
-from foods.models import FoodItem, FoodPackage
+from foods.models import Food, FoodItem, FoodPackage
 
 
 User = get_user_model()
@@ -14,7 +15,9 @@ User = get_user_model()
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="orders")
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
     status = models.CharField(max_length=100, choices=order_status, default="Pending")
     order_id = models.CharField(max_length=100)
     payment_status = models.CharField(
@@ -35,6 +38,15 @@ class Order(models.Model):
         verbose_name_plural = "Orders"
         db_table = "orders"
 
+    def save(self, *args, **kwargs):
+        if not self.order_id:
+            self.order_id = generate_ref()
+        super().save(*args, **kwargs)
+
+    def calculate_total_amount(self):
+        self.total_amount = sum([item.subtotal() for item in self.items.all()])
+        self.save()
+
 
 @str_meta
 class OrderItem(models.Model):
@@ -46,7 +58,7 @@ class OrderItem(models.Model):
     def subtotal(self) -> float:
         if self.food_item_type == "Meal":
             return float(self.quantity) * float(
-                FoodItem.objects.get(id=self.food_item_id).price
+                Food.objects.get(id=self.food_item_id).price
             )
         elif self.food_item_type == "Package":
             return float(self.quantity) * float(

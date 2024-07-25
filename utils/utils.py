@@ -1,8 +1,10 @@
+import random
 import traceback
 import uuid
 from utils.mails import sendmail
 import logging
 from typing import Union
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -89,3 +91,9 @@ def send_reset_otp(email: Union[str, None]) -> Union[str, None]:
         logger.error(f"Error sending email to {email} due to {e}")
         traceback.print_exc()
         return None
+
+
+def generate_ref() -> str:
+    """generate unique reference code"""
+    code = "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    return code.upper()

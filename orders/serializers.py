@@ -26,18 +26,19 @@ class TrayItemSerializer(serializers.ModelSerializer):
 
         food_type = instance.food_item_type
         food_item_id = instance.food_item_id
+        request = self.context.get("request")
 
         if food_type == "Meal":
             food_item_obj = Food.objects.get(id=food_item_id)
-            food = FoodSerializer(food_item_obj).data
+            food = FoodSerializer(food_item_obj, context={"request": request}).data
         elif food_type == "Package":
             food_item_obj = FoodPackage.objects.get(id=food_item_id)
-            food = FoodPackageSerializer(food_item_obj).data
+            food = FoodPackageSerializer(food_item_obj, context={"request": request}).data
         else:
             food = None
 
         item_id = instance.id
-        request = self.context.get("request")
+       
         base_url = request.build_absolute_uri("/")[:-1]
         update_url = f"{base_url}/{item_id}/quantity/update"
 
