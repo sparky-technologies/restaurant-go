@@ -42,15 +42,15 @@ class FoodPackage(models.Model):
         verbose_name = "Food Package"
         verbose_name_plural = "Food Packages"
 
-    def reduce_quantity(self) -> None:
+    def reduce_quantity(self, quantity) -> None:
         """This is a util method to reduce the quantity"""
         if self.available_quantity > 0:
-            self.available_quantity -= 1
+            self.available_quantity -= quantity
             self.save()
 
-    def increase_total_purchase(self) -> None:
+    def increase_total_purchase(self, quantity) -> None:
         """This is a util method to increase the the total purchase"""
-        self.total_purchase += 1
+        self.total_purchase += quantity
         self.save()
 
 
@@ -116,15 +116,15 @@ class Food(models.Model):
     date_created = models.DateTimeField(default=timezone.now)
     date_updated = models.DateTimeField(default=timezone.now)
 
-    def reduce_quantity(self):
+    def reduce_quantity(self, quantity):
         """This is a util method to reduce the quantity"""
         if self.available_quantity > 0:
-            self.available_quantity -= 1
+            self.available_quantity -= quantity
             self.save()
 
-    def increase_total_purchase(self) -> None:
+    def increase_total_purchase(self, quantity) -> None:
         """This is a util method to increase the the total purchase"""
-        self.total_purchase += 1
+        self.total_purchase += quantity
         self.save()
 
 

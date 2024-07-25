@@ -14,7 +14,7 @@ from django.utils import timezone
 import random
 import string
 from constants.constant import food_types, state_choices, city_choices
-from foods.models import FoodItem, FoodPackage
+from foods.models import Food, FoodItem, FoodPackage
 from utils.decorators import str_meta
 
 logger = logging.getLogger(__name__)
@@ -338,7 +338,7 @@ class TrayItem(models.Model):
     def subtotal(self) -> float:
         if self.food_item_type == "Meal":
             return float(self.quantity) * float(
-                FoodItem.objects.get(id=self.food_item_id).price
+                Food.objects.get(id=self.food_item_id).price
             )
         elif self.food_item_type == "Package":
             return float(self.quantity) * float(

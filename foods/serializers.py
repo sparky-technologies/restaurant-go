@@ -38,6 +38,8 @@ class FoodPackageSerializer(serializers.ModelSerializer):
             "items",
             "assets",
             "total_purchase",
+            "groups_link",
+            "self_link",
         )
 
     def get_groups_link(self, obj):
