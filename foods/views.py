@@ -10,6 +10,7 @@ from utils.response import service_response
 from rest_framework.exceptions import MethodNotAllowed
 from django.db.models import Prefetch
 from rest_framework.views import APIView
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # Create your views here.
 
@@ -24,6 +25,7 @@ class FoodPackageViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs) -> Response:
         """List all food packages"""
         try:
+            # TODO: Add pagination to this
             # get food category
             category = request.query_params.get("category", None)
             items_fields: List[str] = ["name", "quantity", "price", "description"]
@@ -42,7 +44,22 @@ class FoodPackageViewSet(viewsets.ModelViewSet):
             serializer: FoodPackageSerializer = FoodPackageSerializer(
                 foods, context={"request": request}, many=True
             )
+
             data = serializer.data
+            paginator = Paginator(data, 30)
+            page = request.GET.get("page", 1)
+            try:
+                foods_page = paginator.page(page)
+            except PageNotAnInteger:
+                foods_page = paginator.page(1)
+            except EmptyPage:
+                foods_page = paginator.page(paginator.num_pages)
+            total_pages = paginator.num_pages
+            data = {
+                "foods": list(foods_page),
+                "total_pages": total_pages,
+                "current_page": int(page),
+            }
             return service_response(
                 status="success", data=data, message="Fetch Successful", status_code=200
             )
@@ -118,6 +135,20 @@ class FoodViewSet(viewsets.ModelViewSet):
                 foods, context={"request": request}, many=True
             )
             data = serializer.data
+            paginator = Paginator(data, 30)
+            page = request.GET.get("page", 1)
+            try:
+                foods_page = paginator.page(page)
+            except PageNotAnInteger:
+                foods_page = paginator.page(1)
+            except EmptyPage:
+                foods_page = paginator.page(paginator.num_pages)
+            total_pages = paginator.num_pages
+            data = {
+                "foods": list(foods_page),
+                "total_pages": total_pages,
+                "current_page": int(page),
+            }
             return service_response(
                 status="success", data=data, message="Fetch Successful", status_code=200
             )
