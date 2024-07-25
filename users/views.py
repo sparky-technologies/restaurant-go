@@ -944,8 +944,20 @@ class AddressViewSet(viewsets.ModelViewSet):
             return handle_internal_server_exception()
 
     # TODO: implement the patch endpoint for user to only update their existing addresses, just the address field
+    def partial_update(self, request, *args, **kwargs):
+        """Partially updates user address
+        """
+        try:
+            # get address instance
+            address = self.get_object()
+            serializer = self.get_serializer_class(address, data=request.data, partial=True)
+            if serializer.is_valid():
+                self.perform_update(serializer)
+                return service_response(status="success", data=serializer.data, message="Address Update Successfully", status_code=200)
+            return service_response(status="error", message=serializer.errors, status_code=400)
+        except Exception:
+            return handle_internal_server_exception()
 
-    # TODO: implement delete address for user to delete any of their address
     def destroy(self, request, *args, **kwargs):
         """Delete user address"""
         try:
@@ -960,7 +972,6 @@ class AddressViewSet(viewsets.ModelViewSet):
         except Exception:
             return handle_internal_server_exception()
 
-    # TODO: implement get users addresses
     def list(self, request, *args, **kwargs):
         """List all user addresses"""
         try:

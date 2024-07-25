@@ -66,7 +66,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.cache.UpdateCacheMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.cache.FetchFromCacheMiddleware",
+    # "django.middleware.cache.FetchFromCacheMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -273,18 +273,20 @@ try:
 except Exception:
     pass
 
-
+REDIS_HOST = os.getenv("REDIS_URL", "localhost:6379")
+redis_url = f"redis://{REDIS_HOST}"
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": (
-            os.getenv("REDIS_URL")
+            redis_url
             if os.getenv("REDIS_URL")
             else "rediss://red-cp83t0ol6cac73bt0pdg:E5urhmwA6rS9EZral8tj28afEvag3G61@oregon-redis.render.com:6379"
         ),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
+        "TIMEOUT": 0,
     }
 }
 
