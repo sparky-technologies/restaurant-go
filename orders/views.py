@@ -9,6 +9,7 @@ from utils.exceptions import handle_internal_server_exception
 from django.views.decorators.cache import never_cache
 from utils.utils import generate_ref
 from .models import Order, OrderItem
+from utils.mails import sendmail
 
 # Create your views here.
 
@@ -172,17 +173,31 @@ class CheckoutAPIView(APIView):
             user = request.user
             data = request.data
             # add data validation for address and payment_type
-            # TODO: Add check if payment type is not instant or Ondelivery
             address_id = data.get("address_id")
             address_instance = DeliveryAddress.objects.get(id=int(address_id))
             city = address_instance.city
             address = address_instance.address
             payment_type = data.get("payment_type")
+            if (
+                payment_type.capitalize() != "Instant"
+                and payment_type.capitalize() != "OnDelivery"
+            ):
+                return service_response(
+                    status="error",
+                    data=None,
+                    message="Invalid payment type",
+                    status_code=400,
+                )
             tray = Tray.objects.get(user=user)
-            # TODO: Add check if tray is empty
+            if tray.items.count() == 0:
+                return service_response(
+                    status="error",
+                    data=None,
+                    message="Tray is empty, please add items to the tray",
+                    status_code=400,
+                )
             total_amount = 0
             order_id = generate_ref()
-            # TODO: Check foods if in stock before purchase
             full_address = f"{city} - {address}"
             for item in tray.items.all():
                 if item.food_item_type == "Meal":
@@ -260,6 +275,25 @@ class CheckoutAPIView(APIView):
                 "order_id": order.order_id,
             }
             # TODO: add send admin and user a notification mail
+            user_email = user.email
+            username = user.username
+            admin_message = f"New Order with id {order.order_id} has been placed, visit the admin page to view order and process accordingly."
+            user_message = "Thank your for your order, your order as been received and now processing, One of our delivery agent will contact you soon for the delivery of your order. Thank you for choosing us!"
+            subject = "Restaurant Go Order Notification"
+            sendmail(
+                subject=subject,
+                message=user_message,
+                user_email=user_email,
+                username=username,
+            )
+            admin_subject = "New Order Alert"
+            sendmail(
+                subject=admin_subject,
+                message=admin_message,
+                user_email="truebone005@gmail.com",
+                username="Admin",
+            )
+
             return service_response(
                 status="success",
                 data=data,
