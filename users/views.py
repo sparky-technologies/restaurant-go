@@ -900,17 +900,6 @@ class WalletView(APIView):
             return handle_internal_server_exception()
 
 
-""" Address add constraints
-1. User should be authenticated
-2. State should only be Lagos
-3. Should only be Island
-Cause thats were we will be running for now
-if user send a request with state not lagos, should get grace error
-if user not in island should get grace error
-
-"""
-
-
 class AddressViewSet(viewsets.ModelViewSet):
     """Address management viewset"""
 
@@ -918,7 +907,6 @@ class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer
     permission_class = [IsAuthenticated]
 
-    # TODO: enhance the add address endpoint in such that user can't add more than three addresses
     def create(self, request, *args, **kwargs):
         """Create new user address"""
         try:
@@ -926,6 +914,15 @@ class AddressViewSet(viewsets.ModelViewSet):
                 data=request.data, context={"request": request}
             )
             if serializer.is_valid():
+                # get the DeliveryAddress and count to check if greater than 3
+                count = DeliveryAddress.objects.filter(user=request.user).count()
+                if count == 3:
+                    return service_response(
+                        status="error",
+                        message="User already has 3 addresses",
+                        data=None,
+                        status_code=400,
+                    )
                 serializer.save()
                 return service_response(
                     status="success",
@@ -943,7 +940,55 @@ class AddressViewSet(viewsets.ModelViewSet):
         except Exception:
             return handle_internal_server_exception()
 
-    # TODO: implement the patch endpoint for user to only update their existing addresses, just the address field
+    def partial_update(self, request, *args, **kwargs):
+        """Partially updates user address"""
+        try:
+            # get address instance
+            address = self.get_object()
+            serializer = self.serializer_class(
+                address, context={"request": request}, data=request.data, partial=True
+            )
+            if serializer.is_valid():
+                self.perform_update(serializer)
+                return service_response(
+                    status="success",
+                    data=serializer.data,
+                    message="Address Update Successfully",
+                    status_code=200,
+                )
+            return service_response(
+                status="error", message=serializer.errors, status_code=400
+            )
+        except Exception:
+            return handle_internal_server_exception()
 
-    # TODO: implement delete address for user to delete any of their address
-    # TODO: implement get users addresses
+    def destroy(self, request, *args, **kwargs):
+        """Delete user address"""
+        try:
+            address = self.get_object()
+            address.delete()
+            return service_response(
+                status="success",
+                message="Address deleted successfully",
+                data=None,
+                status_code=204,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+    def list(self, request, *args, **kwargs):
+        """List all user addresses"""
+        try:
+            addresses = DeliveryAddress.objects.filter(user=request.user)
+            serializer = self.serializer_class(
+                addresses, many=True, context={"request": request}
+            )
+            data = serializer.data
+            return service_response(
+                status="success",
+                message="Addresses retrieved successfully",
+                data=data,
+                status_code=200,
+            )
+        except Exception:
+            return handle_internal_server_exception()

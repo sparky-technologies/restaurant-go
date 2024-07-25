@@ -6,6 +6,7 @@ from orders.serializers import TrayItemSerializer
 from users.models import Tray, TrayItem
 from utils.response import service_response
 from utils.exceptions import handle_internal_server_exception
+from django.views.decorators.cache import never_cache
 
 # Create your views here.
 
@@ -130,7 +131,10 @@ class TrayItemListAPIView(APIView):
             # get tray
             tray = Tray.objects.get(user=user)
             # serialize the tray items
-            serializer = self.serializer_class(tray.items, context={"request": request}, many=True)
+            print(tray.items)
+            serializer = self.serializer_class(
+                tray.items, context={"request": request}, many=True
+            )
             return service_response(
                 status="success",
                 data=serializer.data,

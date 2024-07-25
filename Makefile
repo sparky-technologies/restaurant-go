@@ -23,6 +23,10 @@ dbshell:
 test:
 	@pytest
 
+clean:
+	@Get-ChildItem -Path . -Recurse -Directory -Filter '__pycache__' | ForEach-Object { Remove-Item -Recurse -Force $_.FullName }
+
+
 
 help:
 	@echo "Usage: make [command]"
