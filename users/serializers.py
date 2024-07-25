@@ -151,6 +151,9 @@ class AddressSerializer(serializers.HyperlinkedModelSerializer):
         message = {"message": ""}
         state = data.get("state")
         city = data.get("city")
+        if not state or not city:
+            message["message"] = "State and city are required"
+            raise serializers.ValidationError(message)
         if state.capitalize() != "Lagos":
             message["message"] = "We're running in Lagos only for now"
             raise serializers.ValidationError(message)
