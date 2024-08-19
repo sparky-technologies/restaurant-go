@@ -1,3 +1,4 @@
 {
-    "python.REPL.enableREPLSmartSend": false
+    "IDX.aI.enableInlineCompletion": true,
+    "IDX.aI.enableCodebaseIndexing": true
 }

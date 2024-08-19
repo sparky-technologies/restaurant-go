@@ -1,26 +1,22 @@
 [tool.poetry]
 name = "restaurant-go"
 version = "0.1.0"
-description = "Minimal Restaurant Webservices"
-authors = ["Ayobami Alaran A. <ayobamidele006@gmail.com>"]
-license = "MIT"
+description = "Restaurat go app"
+authors = ["ayobamidele006 <ayobamidele006@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.10"
+python = "^3.11"
+
 asgiref = "3.8.1"
 async-timeout = "4.0.3"
-black = "24.4.0"
 certifi = "2024.2.2"
 charset-normalizer = "3.3.2"
-click = "8.1.7"
-colorama = "0.4.6"
 Django = "4.2.11"
 django-cors-headers = "4.3.1"
 django-countries = "7.6.1"
 django-phonenumber-field = "7.3.0"
 django-redis = "5.4.0"
-django-unfold = "0.30.0"
 djangorestframework = "3.15.1"
 djangorestframework-simplejwt = "5.3.1"
 drf-yasg = "1.21.7"
@@ -41,27 +37,26 @@ pluggy = "1.4.0"
 pycodestyle = "2.11.1"
 pyflakes = "3.2.0"
 PyJWT = "2.8.0"
-pytest = "8.1.1"
-pytest-django = "4.8.0"
-pytest-mock = "3.14.0"
-python-dotenv = "1.0.1"
 pytz = "2024.1"
 PyYAML = "6.0.1"
 redis = "5.0.4"
 requests = "2.32.2"
 sqlparse = "0.5.0"
-tomli = "2.0.1"
 typing_extensions = "4.11.0"
 tzdata = "2024.1"
 uritemplate = "4.1.1"
 urllib3 = "2.2.1"
 
+
 [tool.poetry.dev-dependencies]
 black = "24.4.0"
-flake8 = "7.0.0"
+click = "8.1.7"
+colorama = "0.4.6"
 pytest = "8.1.1"
 pytest-django = "4.8.0"
 pytest-mock = "3.14.0"
+python-dotenv = "1.0.1"
+tomli = "2.0.1"
 
 
 [build-system]
