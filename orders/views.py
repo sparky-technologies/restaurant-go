@@ -222,6 +222,7 @@ class CheckoutAPIView(APIView):
                         )
                     package.available_quantity -= item.quantity
                     package.save()
+                # TODO: Add delivery amount charge
                 total_amount += item.subtotal()
 
             if payment_type.capitalize() == "Instant":
