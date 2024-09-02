@@ -37,6 +37,7 @@ from dotenv import load_dotenv
 from rest_framework import viewsets
 from utils.serializers import serialize_model
 from rest_framework.exceptions import MethodNotAllowed
+from utils.exceptions import ValidationException
 
 load_dotenv()
 
@@ -84,7 +85,7 @@ class CreateUserAPIView(APIView):
                 if otp is None:
                     return service_response(
                         status="error",
-                        message=_("Unresple to send OTP"),
+                        message=_("Unable to send OTP"),
                         status_code=404,
                     )
                 # cache the otp
@@ -102,6 +103,8 @@ class CreateUserAPIView(APIView):
                 return service_response(
                     status="error", message=serializer.errors, status_code=400
                 )
+        except ValidationException as e:
+            return service_response(status="error", message=e.message, status_code=409)
 
         except Exception:
             return handle_internal_server_exception()
@@ -165,7 +168,7 @@ class ResendOTP(APIView):
             otp = send_otp(email, username)
             if otp is None:
                 return service_response(
-                    status="error", message=_("Unresple to send OTP"), status_code=404
+                    status="error", message=_("Unable to send OTP"), status_code=404
                 )
             # cache the otp
             cache.set(email, otp, 60 * 10)  # otp expires in 10 mins
@@ -956,8 +959,9 @@ class AddressViewSet(viewsets.ModelViewSet):
                     message="Address Update Successfully",
                     status_code=200,
                 )
+
             return service_response(
-                status="error", message=serializer.errors, status_code=400
+                status="error", message=serializer.errors["message"][0], status_code=400
             )
         except Exception:
             return handle_internal_server_exception()
