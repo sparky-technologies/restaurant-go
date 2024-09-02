@@ -121,6 +121,39 @@ class UpdateTrayItemQuantityAPIView(APIView):
             return handle_internal_server_exception()
 
 
+class UpdateTrayItemDecreaseAPIView(APIView):
+    """Decrease the quantity of an item in the Tray"""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """Decrease quantity post handler"""
+        try:
+            item_id = kwargs.get("item_id")
+            # get the TrayItem
+            tray_item = TrayItem.objects.get(id=item_id)
+            # decrease the quantity
+            quantity = tray_item.decrease_quantity()
+            data = {
+                "quantity": quantity,
+            }
+            return service_response(
+                status="success",
+                data=data,
+                message="Quantity Decreased Successfully",
+                status_code=200,
+            )
+        except TrayItem.DoesNotExist:
+            return service_response(
+                status="error",
+                data=None,
+                message="This Tray Item Does Not Exist",
+                status_code=404,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
 class TrayItemListAPIView(APIView):
     """List all items in the Tray"""
 
@@ -222,8 +255,9 @@ class CheckoutAPIView(APIView):
                         )
                     package.available_quantity -= item.quantity
                     package.save()
+                # TODO: Add delivery amount charge
                 total_amount += item.subtotal()
-
+            total_amount += 300
             if payment_type.capitalize() == "Instant":
                 # charge the user instantly
                 message = user.debit(user.id, total_amount, "Food Purchase", order_id)
@@ -306,6 +340,29 @@ class CheckoutAPIView(APIView):
                 data=None,
                 message="Invalid Address",
                 status_code=404,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class OrderSummaryAPIView(APIView):
+    """Order Summary"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """retrieve the item total amount in the tray"""
+        try:
+            user = request.user
+            tray = Tray.objects.get(user=user)
+            total_amount = 0
+            for item in tray.items.all():
+                total_amount += item.subtotal()
+            return service_response(
+                status="success",
+                data={"total_amount": total_amount},
+                message="Tray Total Amount Fetch Successfully",
+                status_code=200,
             )
         except Exception:
             return handle_internal_server_exception()

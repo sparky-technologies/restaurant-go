@@ -346,6 +346,14 @@ class TrayItem(models.Model):
             )
         return 0
 
+    # TODO: add quantity decrease
+
+    def decrease_quantity(self):
+        if self.quantity > 1:
+            self.quantity -= 1
+            self.save()
+        return self.quantity
+
     def increase_quantity(self):
         self.quantity += 1
         self.save()
