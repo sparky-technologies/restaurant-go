@@ -4,6 +4,7 @@ from orders.views import (
     AddItemToTrayAPIView,
     CheckoutAPIView,
     TrayItemListAPIView,
+    UpdateTrayItemDecreaseAPIView,
     UpdateTrayItemQuantityAPIView,
 )
 
@@ -14,6 +15,11 @@ urlpatterns = [
         "tray/<int:item_id>/quantity/update/",
         UpdateTrayItemQuantityAPIView.as_view(),
         name="update-item-quantity",
+    ),
+    path(
+        "tray/<int:item_id>/quantity/decrease/",
+        UpdateTrayItemDecreaseAPIView.as_view(),
+        name="decrease-quantity",
     ),
     path(
         "tray/items",
