@@ -27,7 +27,7 @@ def test_send_otp_valid_input(email, username):
         otp = send_otp(email, username)
 
         assert otp is not None
-        assert len(otp) == 6
+        assert len(otp) == 4
         message = f"""
         Your One Time Password is {otp}
         <br />
@@ -58,12 +58,7 @@ def test_send_otp_exception(email, username):
 
 
 # Test to handle exceptions raised by the sendmail function
-@pytest.mark.parametrize(
-    "email",
-    [
-        "test@example.com"
-    ]
-)
+@pytest.mark.parametrize("email", ["test@example.com"])
 def test_send_reset_otp_sendmail_exception(email):
     with patch("utils.utils.sendmail") as mocked_sendmail:
         mocked_sendmail.side_effect = Exception("Email sending failed")
@@ -76,12 +71,7 @@ def test_send_reset_otp_sendmail_exception(email):
 
 
 # Test to verify logging when an exception occurs
-@pytest.mark.parametrize(
-    "email",
-    [
-        "test@example.com"
-    ]
-)
+@pytest.mark.parametrize("email", ["test@example.com"])
 def test_send_reset_otp_logging_exception(email):
     with patch("utils.utils.sendmail") as mocked_sendmail:
         mocked_sendmail.side_effect = Exception("Email sending failed")
@@ -92,12 +82,7 @@ def test_send_reset_otp_logging_exception(email):
 
 
 # Test to verify the return value when sendmail fails
-@pytest.mark.parametrize(
-    "email",
-    [
-        "test@example.com"
-    ]
-)
+@pytest.mark.parametrize("email", ["test@example.com"])
 def test_send_reset_otp_sendmail_failure(email):
     with patch("utils.utils.sendmail") as mocked_sendmail:
         mocked_sendmail.side_effect = Exception("Email sending failed")
@@ -106,12 +91,7 @@ def test_send_reset_otp_sendmail_failure(email):
 
 
 # Existing valid test case
-@pytest.mark.parametrize(
-    "email",
-    [
-        "test@example.com"
-    ]
-)
+@pytest.mark.parametrize("email", ["test@example.com"])
 def test_send_reset_otp(email):
     with patch("utils.utils.sendmail") as mocked_sendmail:
         otp = send_reset_otp(email)

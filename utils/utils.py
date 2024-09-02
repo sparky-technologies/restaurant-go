@@ -29,7 +29,7 @@ def send_otp(email: Union[str, None], username: Union[str, None]) -> Union[str, 
 
         uid = uuid.uuid4()
         uuid_hex = uid.hex  # convert to hex value
-        otp = "".join(filter(str.isdigit, uuid_hex))[:6]
+        otp = "".join(filter(str.isdigit, uuid_hex))[:4]
 
         message = f"""
         Your One Time Password is {otp}
