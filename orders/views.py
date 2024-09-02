@@ -121,6 +121,37 @@ class UpdateTrayItemQuantityAPIView(APIView):
             return handle_internal_server_exception()
 
 
+
+class UpdateTrayItemDecreaseAPIView(APIView):
+    """Decrease the quantity of an item in the Tray"""
+    permission_classes = [IsAuthenticated]
+    def post(self, request, *args, **kwargs):
+        """Decrease quantity post handler"""
+        try:
+            item_id = kwargs.get("item_id")
+            # get the TrayItem
+            tray_item = TrayItem.objects.get(id=item_id)
+            # decrease the quantity
+            quantity = tray_item.decrease_quantity()
+            data = {
+                "quantity": quantity,
+            }
+            return service_response(
+                status="success",
+                data=data,
+                message="Quantity Decreased Successfully",
+                status_code=200,
+            )
+        except TrayItem.DoesNotExist:
+            return service_response(
+                status="error",
+                data=None,
+                message="This Tray Item Does Not Exist",
+                status_code=404,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
 class TrayItemListAPIView(APIView):
     """List all items in the Tray"""
 
