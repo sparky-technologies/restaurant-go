@@ -281,7 +281,7 @@ CACHES = {
         "LOCATION": (
             redis_url
             if os.getenv("REDIS_URL")
-            else "rediss://default:BeClknl6V7Jqr3rYmvZZLtvn7UAwMBfz@redis-15337.c62.us-east-1-4.ec2.redns.redis-cloud.com:15337"
+            else "redis://default:BeClknl6V7Jqr3rYmvZZLtvn7UAwMBfz@redis-15337.c62.us-east-1-4.ec2.redns.redis-cloud.com:15337"
         ),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
