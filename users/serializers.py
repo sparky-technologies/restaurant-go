@@ -3,6 +3,7 @@ from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
+from utils.exceptions import ValidationException
 
 from users.models import DeliveryAddress
 
@@ -62,13 +63,11 @@ class UserSerializer(ModelSerializer):
         password1 = data.get("password1")
         password2 = data.get("password2")
         if User.objects.filter(email__iexact=email):
-            errors["error"] = _("The email address is already in use")
-            raise serializers.ValidationError(errors)
+            raise ValidationException(_("The email address is already in use"))
         if User.objects.filter(username__iexact=username):
-            errors["error"] = _("Username is taken!")
-            raise serializers.ValidationError(errors)
+            raise ValidationException(_("Username is taken!"))
         if password1 != password2:
-            errors["error"] = _("The two password fields didn't match.")
+            errors["password1"] = _("The two passwords do not match")
             raise serializers.ValidationError(errors)
         return data
 
@@ -159,7 +158,7 @@ class AddressSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(message)
         if city.capitalize() != "Island":
             message["message"] = "We're running in Island only for now"
-            raise serializers.ValidationError("We're running in Island only for now")
+            raise serializers.ValidationError(message)
         return data
 
     def get_self_url(self, obj):
