@@ -17,6 +17,7 @@ def test_service_response_with_empty_data():
         "status": expected_status,
         "message": expected_message,
         "data": expected_data,
+        "status_code": expected_status_code,
     }
 
 
@@ -34,6 +35,7 @@ def test_service_response_with_empty_data_and_custom_status():
         "status": expected_status,
         "message": expected_message,
         "data": expected_data,
+        "status_code": expected_status_code,
     }
 
 
@@ -55,6 +57,7 @@ def test_service_response_with_empty_data_and_custom_status_code():
         "status": expected_status,
         "message": expected_message,
         "data": expected_data,
+        "status_code": expected_status_code,
     }
 
 
@@ -76,6 +79,7 @@ def test_service_response_with_empty_data_and_custom_status_and_status_code():
         "status": expected_status,
         "message": expected_message,
         "data": expected_data,
+        "status_code": expected_status_code,
     }
 
 
@@ -93,4 +97,5 @@ def test_service_response_with_empty_data_and_message():
         "status": expected_status,
         "message": expected_message,
         "data": expected_data,
+        "status_code": expected_status_code,
     }
