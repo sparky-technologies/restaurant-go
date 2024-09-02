@@ -3,6 +3,7 @@ from django.urls import path, include
 from orders.views import (
     AddItemToTrayAPIView,
     CheckoutAPIView,
+    OrderSummaryAPIView,
     TrayItemListAPIView,
     UpdateTrayItemDecreaseAPIView,
     UpdateTrayItemQuantityAPIView,
@@ -27,4 +28,5 @@ urlpatterns = [
         name="tray-items",
     ),
     path("tray/checkout", CheckoutAPIView.as_view(), name="checkout"),
+    path("orders/summary", OrderSummaryAPIView.as_view(), name="order-summary"),
 ]

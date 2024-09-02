@@ -121,10 +121,11 @@ class UpdateTrayItemQuantityAPIView(APIView):
             return handle_internal_server_exception()
 
 
-
 class UpdateTrayItemDecreaseAPIView(APIView):
     """Decrease the quantity of an item in the Tray"""
+
     permission_classes = [IsAuthenticated]
+
     def post(self, request, *args, **kwargs):
         """Decrease quantity post handler"""
         try:
@@ -151,6 +152,7 @@ class UpdateTrayItemDecreaseAPIView(APIView):
             )
         except Exception:
             return handle_internal_server_exception()
+
 
 class TrayItemListAPIView(APIView):
     """List all items in the Tray"""
@@ -338,6 +340,29 @@ class CheckoutAPIView(APIView):
                 data=None,
                 message="Invalid Address",
                 status_code=404,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
+class OrderSummaryAPIView(APIView):
+    """Order Summary"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """retrieve the item total amount in the tray"""
+        try:
+            user = request.user
+            tray = Tray.objects.get(user=user)
+            total_amount = 0
+            for item in tray.items.all():
+                total_amount += item.subtotal()
+            return service_response(
+                status="success",
+                data={"total_amount": total_amount},
+                message="Tray Total Amount Fetch Successfully",
+                status_code=200,
             )
         except Exception:
             return handle_internal_server_exception()
