@@ -79,7 +79,7 @@ ROOT_URLCONF = "restaurant_go.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": ["templates"],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -273,21 +273,21 @@ try:
 except Exception:
     pass
 
-REDIS_HOST = os.getenv("REDIS_URL", "localhost:6379")
-redis_url = f"redis://{REDIS_HOST}"
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": (
-            redis_url
-            if os.getenv("REDIS_URL")
-            else "redis://sparky:BL9yiPyhM_4puGf@redis-15337.c62.us-east-1-4.ec2.redns.redis-cloud.com:15337"
-        ),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "TIMEOUT": 0,
-    }
-}
+# REDIS_HOST = os.getenv("REDIS_URL", None)
+# redis_url = f"redis://{REDIS_HOST}"
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": (
+#             redis_url
+#             if os.getenv("REDIS_URL")
+#             else ""
+#         ),
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         },
+#         "TIMEOUT": 0,
+#     }
+# }
 
-print(f'Cache: {CACHES["default"]["LOCATION"]}')
+# print(f'Cache: {CACHES["default"]["LOCATION"]}')
