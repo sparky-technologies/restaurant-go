@@ -127,6 +127,7 @@ class ChangePasswordSerializer(ModelSerializer):
         password2 = data.get("password2")
         if password1 != password2:
             raise ValidationException(_("Password must match"))
+        return data
 
     class Meta:
         model = User
