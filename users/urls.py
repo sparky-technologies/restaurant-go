@@ -15,6 +15,7 @@ from .views import (
     UpdatePasswordView,
     status,
     WalletView,
+    GetUserInfoAPIView,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -105,6 +106,7 @@ urlpatterns = [
     path("social_auth", SocialAuth.as_view(), name="social_auth"),
     path("reset-password", PasswordResetView.as_view(), name="Reset-Password"),
     path("change-password", ChangePasswordView.as_view(), name="Change-Password"),
+    path("users/user-info", GetUserInfoAPIView.as_view(), name="user-info"),
     path(
         "update-password",
         UpdatePasswordView.as_view(),
