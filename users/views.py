@@ -848,6 +848,43 @@ class UserViewSet(viewsets.ModelViewSet):
             return []
 
 
+class GetUserInfoAPIView(APIView):
+    """UserInfo API View Handler
+
+    Args:
+        APIView (_type_): _description_
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            # get the user from db
+            user = User.objects.get(pk=user.id)
+            user_id = user.id
+            user_full_name = user.full_name
+            keys_to_remove = [
+                "password",
+                "groups",
+                "user_permissions",
+                "reset_token",
+                "is_staff",
+                "is_superuser",
+            ]
+            data = serialize_model(user, keys_to_remove)
+            data["user_id"] = user_id
+            data["full_name"] = user_full_name
+            return service_response(
+                status="success",
+                data=data,
+                message="Successfully Fetched",
+                status_code=200,
+            )
+        except Exception:
+            return handle_internal_server_exception()
+
+
 class WalletView(APIView):
     """View to get the user wallet balance"""
 
