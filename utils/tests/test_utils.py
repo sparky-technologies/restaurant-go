@@ -96,7 +96,7 @@ def test_send_reset_otp(email):
     with patch("utils.utils.sendmail") as mocked_sendmail:
         otp = send_reset_otp(email)
         assert otp is not None
-        assert len(otp) == 6
+        assert len(otp) == 4
         message = f"""
         Your One Time Reset Password is {otp}
         <br />
