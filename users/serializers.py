@@ -118,9 +118,19 @@ class LoginSerializer(ModelSerializer):
 class ChangePasswordSerializer(ModelSerializer):
     """Serializer for changing a user password"""
 
+    password1 = serializers.CharField(write_only=True, required=True, min_length=8)
+    password2 = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate(self, data):
+        """Validate user's inputed data on password change"""
+        password1 = data.get("password1")
+        password2 = data.get("password2")
+        if password1 != password2:
+            raise ValidationException(_("Password must match"))
+
     class Meta:
         model = User
-        fields = ("password", "reset_token")
+        fields = ("password1", "reset_token", "password2")
 
 
 class UpdatePasswordSerializer(ModelSerializer):
