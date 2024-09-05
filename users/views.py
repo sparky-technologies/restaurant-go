@@ -294,9 +294,11 @@ class PasswordResetView(APIView):
             otp: Union[str, None] = send_reset_otp(email)
             if otp:
                 key = email
+                reset_key = f"Reset_Token:{otp}"
                 user.reset_token = otp
                 user.save()
                 cache.set(key, otp, 60 * 10)
+                cache.set(reset_key, otp, 60 * 10)
                 return service_response(
                     status="success",
                     message=(f"Reset OTP has been sent to your email {email}"),
@@ -327,7 +329,7 @@ class ChangePasswordView(APIView):
             serializer = self.serializer_class(data=request.data)
             if serializer.is_valid():
                 token = serializer.validated_data.get("reset_token")
-                password = serializer.validated_data.get("password")
+                password = serializer.validated_data.get("password1")
                 try:
                     user = User.objects.get(reset_token=token)
                     key = f"Reset_Token:{token}"
@@ -337,7 +339,7 @@ class ChangePasswordView(APIView):
                         user.save()
                         return service_response(
                             status="sucess",
-                            message="Password sucessfully updated",
+                            message="Password successfully updated",
                             status_code=status.HTTP_200_OK,
                         )
                     return service_response(
@@ -354,6 +356,12 @@ class ChangePasswordView(APIView):
             return service_response(
                 status="error",
                 message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationException as e:
+            return service_response(
+                status="error",
+                message=e.message,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
