@@ -205,7 +205,7 @@ class UserLoginAPIView(APIView):
                 token_data = {
                     "access_token": access_token,
                     "refresh_token": refresh_token,
-                    "expires_in": 1440,  # in minutes
+                    "expires_in": 86400000000,  # in microseconds
                 }
 
                 now: datetime = datetime.now()
