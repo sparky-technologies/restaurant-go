@@ -205,7 +205,7 @@ class UserLoginAPIView(APIView):
                 token_data = {
                     "access_token": access_token,
                     "refresh_token": refresh_token,
-                    "expires_in": tokens.access_token.lifetime.total_seconds(),  # Expiry time in seconds
+                    "expires_in": 1440,  # in minutes
                 }
 
                 now: datetime = datetime.now()
@@ -338,7 +338,7 @@ class ChangePasswordView(APIView):
                         user.reset_token = None
                         user.save()
                         return service_response(
-                            status="sucess",
+                            status="success",
                             message="Password successfully updated",
                             status_code=status.HTTP_200_OK,
                         )
