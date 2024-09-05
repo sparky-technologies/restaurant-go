@@ -338,7 +338,7 @@ class ChangePasswordView(APIView):
                         user.reset_token = None
                         user.save()
                         return service_response(
-                            status="sucess",
+                            status="success",
                             message="Password successfully updated",
                             status_code=status.HTTP_200_OK,
                         )
