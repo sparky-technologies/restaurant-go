@@ -293,7 +293,7 @@ class PasswordResetView(APIView):
 
             otp: Union[str, None] = send_reset_otp(email)
             if otp:
-                key = f"Reset_Token:{otp}"
+                key = email
                 user.reset_token = otp
                 user.save()
                 cache.set(key, otp, 60 * 10)
